@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1a2235"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22d3ee"/>
+      <stop offset="100%" style="stop-color:#818cf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Coin/money symbol -->
+  <circle cx="256" cy="240" r="120" fill="none" stroke="url(#accent)" stroke-width="16"/>
+  <text x="256" y="270" text-anchor="middle" font-family="Arial,sans-serif" font-size="140" font-weight="bold" fill="url(#accent)">$</text>
+  <!-- Cross/spiritual element -->
+  <rect x="240" y="380" width="32" height="80" rx="6" fill="#c084fc" opacity="0.8"/>
+  <rect x="224" y="396" width="64" height="32" rx="6" fill="#c084fc" opacity="0.8"/>
+  <!-- App name -->
+  <text x="256" y="500" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="600" fill="#94a3b8">MAYORDOMÍA</text>
+</svg>
