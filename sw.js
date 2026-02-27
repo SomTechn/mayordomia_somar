@@ -1,15 +1,6 @@
 const CACHE_NAME = 'mayordomia-v1';
-const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap'
-];
 
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-    );
     self.skipWaiting();
 });
 
@@ -23,13 +14,16 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+    // Don't cache supabase API calls
     if (event.request.url.includes('supabase')) return;
     
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
                 return response;
             })
             .catch(() => caches.match(event.request))
