@@ -2860,22 +2860,26 @@
     let familyMembers = [];
 
     async function loadFamilyData() {
-        // Check if user belongs to a family
-        const { data: memberData } = await supabaseClient.from('family_members')
-            .select('*, families(*)')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
+        try {
+            const { data: memberData } = await supabaseClient.from('family_members')
+                .select('*, families(*)')
+                .eq('user_id', currentUser.id)
+                .maybeSingle();
 
-        if (memberData && memberData.families) {
-            familyData = memberData.families;
-            familyData.myRole = memberData.role;
+            if (memberData && memberData.families) {
+                familyData = memberData.families;
+                familyData.myRole = memberData.role;
 
-            // Load all members
-            const { data: members } = await supabaseClient.from('family_members')
-                .select('*, users(id, full_name, email, currency)')
-                .eq('family_id', familyData.id);
-            familyMembers = members || [];
-        } else {
+                const { data: members } = await supabaseClient.from('family_members')
+                    .select('*, users(id, full_name, email, currency)')
+                    .eq('family_id', familyData.id);
+                familyMembers = members || [];
+            } else {
+                familyData = null;
+                familyMembers = [];
+            }
+        } catch (e) {
+            console.warn('Family load skipped:', e);
             familyData = null;
             familyMembers = [];
         }
@@ -2929,47 +2933,47 @@
             const uid = member.user_id;
             const name = member.users?.full_name || 'Usuario';
 
-            // Accounts
-            const { data: accs } = await supabaseClient.from('accounts')
-                .select('balance, type').eq('user_id', uid).eq('is_active', true);
-            const memberBalance = (accs || []).reduce((s, a) => s + parseFloat(a.balance || 0), 0);
-            totalBalance += memberBalance;
+            try {
+                const { data: summaryData } = await supabaseClient.rpc('get_family_member_summary', {
+                    p_member_id: uid,
+                    p_month_start: getMonthRange().start,
+                    p_month_end: getMonthRange().end
+                });
 
-            // Debts
-            const { data: memberDebts } = await supabaseClient.from('debts')
-                .select('current_balance').eq('user_id', uid).eq('status', 'active');
-            const memberDebt = (memberDebts || []).reduce((s, d) => s + parseFloat(d.current_balance || 0), 0);
-            totalDebt += memberDebt;
+                const s = summaryData || { balance: 0, debt: 0, income: 0, expenses: 0 };
+                totalBalance += parseFloat(s.balance || 0);
+                totalDebt += parseFloat(s.debt || 0);
 
-            // Month transactions
-            const { start, end } = getMonthRange();
-            const { data: txs } = await supabaseClient.from('transactions')
-                .select('type, amount').eq('user_id', uid)
-                .gte('date', start).lte('date', end);
-            const income = (txs || []).filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
-            const expense = (txs || []).filter(t => t.type === 'expense').reduce((s, t) => s + parseFloat(t.amount), 0);
-
-            summariesHtml.push(`
-                <div class="card" style="margin-bottom:10px;">
-                    <p style="font-weight:600;font-size:14px;margin-bottom:10px;">
-                        ${uid === currentUser.id ? '👤' : '👥'} ${name}
-                    </p>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-                        <div>
-                            <p style="font-size:11px;color:var(--text-muted);">Balance</p>
-                            <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-primary);">${fmt(memberBalance)}</p>
-                        </div>
-                        <div>
-                            <p style="font-size:11px;color:var(--text-muted);">Ingresos</p>
-                            <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-success);">${fmt(income)}</p>
-                        </div>
-                        <div>
-                            <p style="font-size:11px;color:var(--text-muted);">Gastos</p>
-                            <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-danger);">${fmt(expense)}</p>
+                summariesHtml.push(`
+                    <div class="card" style="margin-bottom:10px;">
+                        <p style="font-weight:600;font-size:14px;margin-bottom:10px;">
+                            ${uid === currentUser.id ? '👤' : '👥'} ${name}
+                        </p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                            <div>
+                                <p style="font-size:11px;color:var(--text-muted);">Balance</p>
+                                <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-primary);">${fmt(s.balance)}</p>
+                            </div>
+                            <div>
+                                <p style="font-size:11px;color:var(--text-muted);">Ingresos</p>
+                                <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-success);">${fmt(s.income)}</p>
+                            </div>
+                            <div>
+                                <p style="font-size:11px;color:var(--text-muted);">Gastos</p>
+                                <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-danger);">${fmt(s.expenses)}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `);
+                `);
+            } catch (e) {
+                console.warn('Error loading member summary:', e);
+                summariesHtml.push(`
+                    <div class="card" style="margin-bottom:10px;">
+                        <p style="font-weight:600;font-size:14px;">${uid === currentUser.id ? '👤' : '👥'} ${name}</p>
+                        <p style="font-size:12px;color:var(--text-muted);">No se pudieron cargar los datos</p>
+                    </div>
+                `);
+            }
         }
 
         document.getElementById('family-total-balance').textContent = fmt(totalBalance);
