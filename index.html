@@ -67,6 +67,19 @@
             background: var(--bg-primary);
         }
 
+        #main-app {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        #auth-screen, #onboarding-screen {
+            flex: 1;
+            overflow-y: auto;
+        }
+
         .app-header {
             padding: 16px 20px 12px;
             display: flex;
@@ -108,10 +121,12 @@
         /* ===== PAGE CONTENT ===== */
         .page-content {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 0 20px 100px;
             scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* ===== BOTTOM NAV ===== */
@@ -1153,7 +1168,7 @@
         </div>
 
         <!-- Main App -->
-        <div id="main-app" style="display:none">
+        <div id="main-app" style="display:none;">
             <div class="app-header">
                 <h1 id="page-title">Dashboard</h1>
                 <div class="header-actions">
