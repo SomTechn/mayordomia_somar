@@ -1736,7 +1736,7 @@
     // PROFILE CHECK
     // ========================
     async function checkProfile() {
-        const { data } = await supabaseClient.from('users').select('*').eq('id', currentUser.id).single();
+        const { data } = await supabaseClient.from('users').select('*').eq('id', currentUser.id).maybeSingle();
         if (data) {
             userProfile = data;
             document.getElementById('auth-screen').style.display = 'none';
@@ -1789,33 +1789,39 @@
             period_start_day: 1,
         };
 
-        const { error } = await supabaseClient.from('users').insert(profile);
+        const { error } = await supabaseClient.from('users').upsert(profile, { onConflict: 'id' });
         if (error) return showToast('Error al crear perfil: ' + error.message, 'error');
 
         userProfile = profile;
 
-        // Create default categories
-        const cats = DEFAULT_CATEGORIES.map(c => ({
-            user_id: currentUser.id,
-            name: c.name,
-            type: c.type,
-            icon: c.icon,
-            is_default: true
-        }));
-        await supabaseClient.from('categories').insert(cats);
-
-        // Create default accounts
-        const defaultAccounts = [
-            { user_id: currentUser.id, name: 'Efectivo', type: 'cash', balance: 0, icon: '💵', color: '#34d399', is_active: true },
-            { user_id: currentUser.id, name: 'Banco Principal', type: 'bank', balance: 0, icon: '🏦', color: '#818cf8', is_active: true },
-        ];
-        if (spiritualEnabled) {
-            defaultAccounts.push(
-                { user_id: currentUser.id, name: 'Fondo Diezmo', type: 'tithe', balance: 0, icon: '📖', color: '#c084fc', is_active: true },
-                { user_id: currentUser.id, name: 'Fondo Ofrenda', type: 'offering', balance: 0, icon: '🙏', color: '#a78bfa', is_active: true }
-            );
+        // Create default categories (only if none exist)
+        const { data: existingCats } = await supabaseClient.from('categories').select('id').eq('user_id', currentUser.id).limit(1);
+        if (!existingCats || existingCats.length === 0) {
+            const cats = DEFAULT_CATEGORIES.map(c => ({
+                user_id: currentUser.id,
+                name: c.name,
+                type: c.type,
+                icon: c.icon,
+                is_default: true
+            }));
+            await supabaseClient.from('categories').insert(cats);
         }
-        await supabaseClient.from('accounts').insert(defaultAccounts);
+
+        // Create default accounts (only if none exist)
+        const { data: existingAccs } = await supabaseClient.from('accounts').select('id').eq('user_id', currentUser.id).limit(1);
+        if (!existingAccs || existingAccs.length === 0) {
+            const defaultAccounts = [
+                { user_id: currentUser.id, name: 'Efectivo', type: 'cash', balance: 0, icon: '💵', color: '#34d399', is_active: true },
+                { user_id: currentUser.id, name: 'Banco Principal', type: 'bank', balance: 0, icon: '🏦', color: '#818cf8', is_active: true },
+            ];
+            if (spiritualEnabled) {
+                defaultAccounts.push(
+                    { user_id: currentUser.id, name: 'Fondo Diezmo', type: 'tithe', balance: 0, icon: '📖', color: '#c084fc', is_active: true },
+                    { user_id: currentUser.id, name: 'Fondo Ofrenda', type: 'offering', balance: 0, icon: '🙏', color: '#a78bfa', is_active: true }
+                );
+            }
+            await supabaseClient.from('accounts').insert(defaultAccounts);
+        }
 
         document.getElementById('onboarding-screen').style.display = 'none';
         document.getElementById('main-app').style.display = 'flex';
