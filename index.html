@@ -1425,9 +1425,45 @@
                     <select class="form-select" id="tx-to-account"></select>
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" class="form-input" id="tx-date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hora</label>
+                        <input type="time" class="form-input" id="tx-time">
+                    </div>
+                </div>
+
+                <!-- Photo Upload -->
                 <div class="form-group">
-                    <label class="form-label">Fecha</label>
-                    <input type="date" class="form-input" id="tx-date">
+                    <label class="form-label">📷 Foto de Respaldo (opcional)</label>
+                    <div id="tx-photo-area" style="position:relative;">
+                        <input type="file" id="tx-photo" accept="image/*" capture="environment" 
+                            style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;" 
+                            onchange="previewPhoto(this)">
+                        <div id="tx-photo-placeholder" style="
+                            border: 2px dashed var(--border-color);
+                            border-radius: var(--radius-sm);
+                            padding: 20px;
+                            text-align: center;
+                            color: var(--text-muted);
+                            font-size: 13px;
+                            transition: all 0.2s;
+                        ">
+                            📸 Toca para tomar foto o seleccionar imagen
+                        </div>
+                        <div id="tx-photo-preview" style="display:none; position:relative;">
+                            <img id="tx-photo-img" style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius-sm);">
+                            <button onclick="clearPhoto()" style="
+                                position:absolute;top:8px;right:8px;
+                                background:rgba(0,0,0,0.7);color:white;
+                                border:none;border-radius:50%;width:28px;height:28px;
+                                font-size:14px;cursor:pointer;z-index:3;
+                            ">✕</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Spiritual Allocation Preview -->
@@ -1445,9 +1481,14 @@
                     </div>
                 </div>
 
-                <div class="form-row" style="margin-top: 8px;">
+                <div id="tx-saving-indicator" style="display:none; text-align:center; padding:10px;">
+                    <div class="loading-spinner"></div>
+                    <small style="color:var(--text-muted);">Guardando...</small>
+                </div>
+
+                <div class="form-row" style="margin-top: 8px;" id="tx-buttons">
                     <button class="btn btn-secondary" onclick="closeModal('modal-transaction')">Cancelar</button>
-                    <button class="btn btn-primary" onclick="saveTransaction()">Guardar</button>
+                    <button class="btn btn-primary" id="btn-save-tx" onclick="saveTransaction()">Guardar</button>
                 </div>
             </div>
         </div>
@@ -1662,6 +1703,12 @@
     // ========================
     // HELPERS
     // ========================
+    const HN_TZ = 'America/Tegucigalpa';
+
+    function hnNow() {
+        return new Date(new Date().toLocaleString('en-US', { timeZone: HN_TZ }));
+    }
+
     function fmt(amount) {
         const sym = CURRENCY_SYMBOLS[userProfile?.currency || 'HNL'] || 'L';
         return `${sym} ${parseFloat(amount || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1683,14 +1730,81 @@
     }
 
     function todayStr() {
-        return new Date().toISOString().split('T')[0];
+        return hnNow().toISOString().split('T')[0];
+    }
+
+    function nowTimeStr() {
+        const now = hnNow();
+        return now.toTimeString().slice(0, 5); // HH:MM
+    }
+
+    function formatDateHN(dateStr, timeStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr + 'T' + (timeStr || '12:00') + ':00');
+        return d.toLocaleDateString('es-HN', { day: 'numeric', month: 'short', timeZone: HN_TZ });
+    }
+
+    function formatTimeHN(createdAt) {
+        if (!createdAt) return '';
+        const d = new Date(createdAt);
+        return d.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: HN_TZ });
+    }
+
+    function formatFullDateHN(createdAt) {
+        if (!createdAt) return '';
+        const d = new Date(createdAt);
+        return d.toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: HN_TZ });
     }
 
     function getMonthRange() {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+        const now = hnNow();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
         return { start, end };
+    }
+
+    // Photo helpers
+    let currentPhotoFile = null;
+
+    function previewPhoto(input) {
+        const file = input.files[0];
+        if (!file) return;
+        currentPhotoFile = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('tx-photo-img').src = e.target.result;
+            document.getElementById('tx-photo-preview').style.display = 'block';
+            document.getElementById('tx-photo-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearPhoto() {
+        currentPhotoFile = null;
+        document.getElementById('tx-photo').value = '';
+        document.getElementById('tx-photo-preview').style.display = 'none';
+        document.getElementById('tx-photo-placeholder').style.display = 'block';
+    }
+
+    async function uploadPhoto(file) {
+        if (!file) return null;
+        try {
+            const ext = file.name.split('.').pop() || 'jpg';
+            const fileName = `${currentUser.id}/${Date.now()}.${ext}`;
+            const { data, error } = await supabaseClient.storage.from('receipts').upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+            if (error) {
+                console.warn('Photo upload error:', error.message);
+                return null;
+            }
+            const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(fileName);
+            return urlData?.publicUrl || null;
+        } catch (err) {
+            console.warn('Photo upload failed:', err);
+            return null;
+        }
     }
 
     // ========================
@@ -1919,7 +2033,7 @@
 
         // Month income/expenses
         const { start, end } = getMonthRange();
-        const monthTxs = transactions.filter(t => t.date >= start.split('T')[0] && t.date <= end.split('T')[0]);
+        const monthTxs = transactions.filter(t => t.date >= start && t.date <= end);
         const monthIncome = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
         const monthExpense = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + parseFloat(t.amount), 0);
         
@@ -1975,12 +2089,16 @@
         const prefix = t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '';
         const bgColor = t.type === 'income' ? 'rgba(52,211,153,0.1)' : t.type === 'expense' ? 'rgba(248,113,113,0.1)' : 'rgba(129,140,248,0.1)';
         
+        const dateDisplay = formatDateHN(t.date, t.time);
+        const timeDisplay = t.time ? t.time : formatTimeHN(t.created_at);
+        const photoIcon = t.receipt_url ? ' 📎' : '';
+        
         return `
-            <div class="transaction-item">
+            <div class="transaction-item" ${t.receipt_url ? `onclick="window.open('${t.receipt_url}','_blank')"` : ''}>
                 <div class="transaction-icon" style="background: ${bgColor}">${icon}</div>
                 <div class="transaction-info">
-                    <div class="transaction-name">${t.description || catName}</div>
-                    <div class="transaction-category">${catName} · ${new Date(t.date + 'T12:00:00').toLocaleDateString('es-HN', {day: 'numeric', month: 'short'})}</div>
+                    <div class="transaction-name">${t.description || catName}${photoIcon}</div>
+                    <div class="transaction-category">${catName} · ${dateDisplay} · ${timeDisplay}</div>
                 </div>
                 <div class="transaction-amount ${amountClass}">${prefix}${fmt(t.amount)}</div>
             </div>
@@ -2060,7 +2178,7 @@
         container.innerHTML = Object.entries(groups).map(([date, txs]) => `
             <div style="margin-bottom: 16px;">
                 <p style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">
-                    ${new Date(date + 'T12:00:00').toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    ${formatFullDateHN(date + 'T12:00:00')}
                 </p>
                 ${txs.map(t => renderTransactionItem(t)).join('')}
             </div>
@@ -2080,8 +2198,15 @@
     function openTransactionModal(type = 'income') {
         currentTxType = type;
         document.getElementById('tx-date').value = todayStr();
+        document.getElementById('tx-time').value = nowTimeStr();
         document.getElementById('tx-amount').value = '';
         document.getElementById('tx-description').value = '';
+        clearPhoto();
+        
+        // Reset save button state
+        document.getElementById('btn-save-tx').disabled = false;
+        document.getElementById('tx-saving-indicator').style.display = 'none';
+        document.getElementById('tx-buttons').style.display = 'grid';
         
         // Set active tab
         document.querySelectorAll('#transaction-type-tabs .tab').forEach(t => t.classList.remove('active'));
@@ -2148,70 +2273,109 @@
     });
 
     async function saveTransaction() {
-        const amount = parseFloat(document.getElementById('tx-amount').value);
-        if (!amount || amount <= 0) return showToast('Ingresa un monto válido', 'error');
+        try {
+            const amount = parseFloat(document.getElementById('tx-amount').value);
+            if (!amount || amount <= 0) return showToast('Ingresa un monto válido', 'error');
 
-        const description = document.getElementById('tx-description').value.trim();
-        const date = document.getElementById('tx-date').value;
-        const accountId = document.getElementById('tx-account').value;
+            const description = document.getElementById('tx-description').value.trim();
+            const date = document.getElementById('tx-date').value;
+            const time = document.getElementById('tx-time').value || nowTimeStr();
+            const accountId = document.getElementById('tx-account').value;
 
-        if (currentTxType === 'transfer') {
-            const toAccountId = document.getElementById('tx-to-account').value;
-            if (accountId === toAccountId) return showToast('Selecciona cuentas diferentes', 'error');
+            if (!date) return showToast('Selecciona una fecha', 'error');
+            if (!accountId) return showToast('Selecciona una cuenta', 'error');
 
-            // Create two transactions
-            const { error } = await supabaseClient.from('transactions').insert([
-                { user_id: currentUser.id, account_id: accountId, type: 'transfer', amount: -amount, description: description || 'Transferencia', date },
-                { user_id: currentUser.id, account_id: toAccountId, type: 'transfer', amount: amount, description: description || 'Transferencia', date }
-            ]);
-            if (error) return showToast('Error: ' + error.message, 'error');
+            // Show loading state
+            document.getElementById('btn-save-tx').disabled = true;
+            document.getElementById('tx-saving-indicator').style.display = 'block';
+            document.getElementById('tx-buttons').style.display = 'none';
 
-            // Update balances
-            const fromAcc = accounts.find(a => a.id === accountId);
-            const toAcc = accounts.find(a => a.id === toAccountId);
-            await supabaseClient.from('accounts').update({ balance: parseFloat(fromAcc.balance) - amount }).eq('id', accountId);
-            await supabaseClient.from('accounts').update({ balance: parseFloat(toAcc.balance) + amount }).eq('id', toAccountId);
+            // Upload photo if exists
+            let receiptUrl = null;
+            if (currentPhotoFile) {
+                receiptUrl = await uploadPhoto(currentPhotoFile);
+            }
 
-        } else {
-            const categoryId = document.getElementById('tx-category').value;
+            if (currentTxType === 'transfer') {
+                const toAccountId = document.getElementById('tx-to-account').value;
+                if (!toAccountId) return resetSaveBtn('Selecciona cuenta destino');
+                if (accountId === toAccountId) return resetSaveBtn('Selecciona cuentas diferentes');
 
-            const { error } = await supabaseClient.from('transactions').insert({
-                user_id: currentUser.id,
-                account_id: accountId,
-                category_id: categoryId,
-                type: currentTxType,
-                amount,
-                description,
-                date
-            });
-            if (error) return showToast('Error: ' + error.message, 'error');
+                const { error } = await supabaseClient.from('transactions').insert([
+                    { user_id: currentUser.id, account_id: accountId, type: 'transfer', amount: amount, description: description || 'Transferencia enviada', date, time, receipt_url: receiptUrl },
+                    { user_id: currentUser.id, account_id: toAccountId, type: 'transfer', amount: amount, description: description || 'Transferencia recibida', date, time, receipt_url: receiptUrl }
+                ]);
+                if (error) return resetSaveBtn('Error: ' + error.message);
 
-            // Update account balance
-            const acc = accounts.find(a => a.id === accountId);
-            const newBalance = currentTxType === 'income' 
-                ? parseFloat(acc.balance) + amount 
-                : parseFloat(acc.balance) - amount;
-            await supabaseClient.from('accounts').update({ balance: newBalance }).eq('id', accountId);
+                // Update balances using RPC or direct update
+                const fromAcc = accounts.find(a => a.id === accountId);
+                const toAcc = accounts.find(a => a.id === toAccountId);
+                if (fromAcc) {
+                    await supabaseClient.from('accounts').update({ balance: parseFloat(fromAcc.balance) - amount }).eq('id', accountId);
+                }
+                if (toAcc) {
+                    await supabaseClient.from('accounts').update({ balance: parseFloat(toAcc.balance) + amount }).eq('id', toAccountId);
+                }
 
-            // If income and spiritual enabled, create allocation suggestion
-            if (currentTxType === 'income' && userProfile?.spiritual_module_enabled) {
-                const titheAmount = amount * (userProfile.tithe_percentage / 100);
-                const titheAccount = accounts.find(a => a.type === 'tithe');
-                if (titheAccount) {
-                    await supabaseClient.from('spiritual_allocations').insert({
-                        user_id: currentUser.id,
-                        type: 'tithe',
-                        amount: titheAmount,
-                        target_account_id: titheAccount.id,
-                        status: 'suggested'
-                    });
+            } else {
+                const categoryId = document.getElementById('tx-category').value;
+                if (!categoryId && currentTxType !== 'transfer') return resetSaveBtn('Selecciona una categoría');
+
+                const txData = {
+                    user_id: currentUser.id,
+                    account_id: accountId,
+                    category_id: categoryId || null,
+                    type: currentTxType,
+                    amount,
+                    description,
+                    date,
+                    time,
+                    receipt_url: receiptUrl
+                };
+
+                const { error } = await supabaseClient.from('transactions').insert(txData);
+                if (error) return resetSaveBtn('Error: ' + error.message);
+
+                // Update account balance
+                const acc = accounts.find(a => a.id === accountId);
+                if (acc) {
+                    const newBalance = currentTxType === 'income'
+                        ? parseFloat(acc.balance) + amount
+                        : parseFloat(acc.balance) - amount;
+                    await supabaseClient.from('accounts').update({ balance: newBalance }).eq('id', accountId);
+                }
+
+                // Spiritual allocation
+                if (currentTxType === 'income' && userProfile?.spiritual_module_enabled) {
+                    const titheAmount = amount * (userProfile.tithe_percentage / 100);
+                    const titheAccount = accounts.find(a => a.type === 'tithe');
+                    if (titheAccount) {
+                        await supabaseClient.from('spiritual_allocations').insert({
+                            user_id: currentUser.id,
+                            type: 'tithe',
+                            amount: titheAmount,
+                            target_account_id: titheAccount.id,
+                            status: 'suggested'
+                        }).catch(() => {});
+                    }
                 }
             }
-        }
 
-        closeModal('modal-transaction');
-        showToast(currentTxType === 'income' ? 'Ingreso registrado' : currentTxType === 'expense' ? 'Gasto registrado' : 'Transferencia realizada');
-        await loadAllData();
+            closeModal('modal-transaction');
+            currentPhotoFile = null;
+            showToast(currentTxType === 'income' ? 'Ingreso registrado' : currentTxType === 'expense' ? 'Gasto registrado' : 'Transferencia realizada');
+            await loadAllData();
+        } catch (err) {
+            console.error('saveTransaction error:', err);
+            resetSaveBtn('Error inesperado: ' + err.message);
+        }
+    }
+
+    function resetSaveBtn(errorMsg) {
+        document.getElementById('btn-save-tx').disabled = false;
+        document.getElementById('tx-saving-indicator').style.display = 'none';
+        document.getElementById('tx-buttons').style.display = 'grid';
+        if (errorMsg) showToast(errorMsg, 'error');
     }
 
     // ========================
@@ -2401,7 +2565,8 @@
             type: 'expense',
             amount,
             description: `Abono: ${debt.creditor_name}`,
-            date: todayStr()
+            date: todayStr(),
+            time: nowTimeStr()
         });
 
         closeModal('modal-debt-payment');
@@ -2421,7 +2586,7 @@
         }
 
         const { start, end } = getMonthRange();
-        const monthExpenses = transactions.filter(t => t.type === 'expense' && t.date >= start.split('T')[0] && t.date <= end.split('T')[0]);
+        const monthExpenses = transactions.filter(t => t.type === 'expense' && t.date >= start && t.date <= end);
 
         container.innerHTML = budgets.map(b => {
             const spent = monthExpenses.filter(t => t.category_id === b.category_id).reduce((s, t) => s + parseFloat(t.amount), 0);
@@ -2498,7 +2663,7 @@
             filteredTx = transactions.filter(t => new Date(t.date) >= yearStart);
         } else {
             const { start, end } = getMonthRange();
-            filteredTx = transactions.filter(t => t.date >= start.split('T')[0] && t.date <= end.split('T')[0]);
+            filteredTx = transactions.filter(t => t.date >= start && t.date <= end);
         }
 
         const income = filteredTx.filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
