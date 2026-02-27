@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -58,6 +58,7 @@
         /* ===== APP SHELL ===== */
         #app {
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             max-width: 480px;
@@ -124,25 +125,27 @@
             min-height: 0;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 0 20px 100px;
+            padding: 0 20px 120px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
 
         /* ===== BOTTOM NAV ===== */
         .bottom-nav {
-            position: absolute;
+            position: fixed;
             bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(17, 24, 39, 0.95);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background: rgba(17, 24, 39, 0.98);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-top: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-around;
-            padding: 8px 12px calc(8px + var(--safe-bottom));
+            padding: 8px 12px calc(12px + var(--safe-bottom));
             z-index: 100;
         }
 
