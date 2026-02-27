@@ -1175,6 +1175,7 @@
             <div class="app-header">
                 <h1 id="page-title">Dashboard</h1>
                 <div class="header-actions">
+                    <button class="icon-btn" onclick="navigateTo('family')" title="Familia">👨‍👩‍👧</button>
                     <button class="icon-btn" onclick="showNotificationsPanel()">🔔</button>
                     <button class="icon-btn" onclick="navigateTo('settings')">⚙️</button>
                 </div>
@@ -1330,6 +1331,10 @@
                         </div>
                     </div>
                     <div class="settings-group">
+                        <div class="settings-group-title">👨‍👩‍👧‍👦 Familia</div>
+                        <div id="family-settings-content"></div>
+                    </div>
+                    <div class="settings-group">
                         <div class="settings-group-title">Mayordomía Espiritual</div>
                         <div class="settings-item">
                             <span>✝️</span>
@@ -1361,6 +1366,58 @@
                             <span>🚪</span>
                             <p style="color: var(--accent-danger);">Cerrar Sesión</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- === FAMILY PAGE === -->
+                <div id="page-family" class="page">
+                    <div id="family-no-group" style="display:none">
+                        <div class="empty-state" style="padding-top:30px;">
+                            <span>👨‍👩‍👧‍👦</span>
+                            <p style="margin-bottom:20px;">No perteneces a ninguna familia aún</p>
+                        </div>
+                        <button class="btn btn-primary" style="margin-bottom:12px;" onclick="openCreateFamilyModal()">
+                            🏠 Crear Familia
+                        </button>
+                        <button class="btn btn-secondary" onclick="openJoinFamilyModal()">
+                            🔗 Unirse con Código
+                        </button>
+                    </div>
+
+                    <div id="family-group" style="display:none">
+                        <div class="card card-glow" style="margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+                                <div style="font-size:40px;">🏠</div>
+                                <div style="flex:1;">
+                                    <h3 id="family-name" style="font-size:18px;font-weight:700;"></h3>
+                                    <p style="font-size:12px;color:var(--text-muted);">Código de invitación:</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;background:var(--bg-input);padding:12px 16px;border-radius:var(--radius-sm);">
+                                <code id="family-invite-code" style="font-family:var(--font-mono);font-size:18px;font-weight:700;letter-spacing:3px;flex:1;color:var(--accent-primary);"></code>
+                                <button class="btn btn-sm btn-secondary" onclick="copyInviteCode()" style="width:auto;padding:8px 14px;">📋 Copiar</button>
+                            </div>
+                        </div>
+
+                        <div class="section-title"><span>Miembros</span></div>
+                        <div id="family-members-list"></div>
+
+                        <div class="section-title" style="margin-top:24px;"><span>📊 Finanzas Familiares</span></div>
+                        
+                        <div class="card" style="margin-bottom:12px;">
+                            <div class="form-row">
+                                <div>
+                                    <p style="font-size:12px;color:var(--text-muted);">Balance Familiar</p>
+                                    <p id="family-total-balance" style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-primary);">L 0</p>
+                                </div>
+                                <div>
+                                    <p style="font-size:12px;color:var(--text-muted);">Deudas Familiar</p>
+                                    <p id="family-total-debt" style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-danger);">L 0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="family-member-summaries"></div>
                     </div>
                 </div>
             </div>
@@ -1630,6 +1687,39 @@
             </div>
         </div>
 
+        <!-- Create Family Modal -->
+        <div class="modal-overlay" id="modal-create-family">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">🏠 Crear Familia</h3>
+                <div class="form-group">
+                    <label class="form-label">Nombre de la Familia</label>
+                    <input type="text" class="form-input" id="family-create-name" placeholder="Ej: Familia Martínez">
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-create-family')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="createFamily()">Crear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Family Modal -->
+        <div class="modal-overlay" id="modal-join-family">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">🔗 Unirse a Familia</h3>
+                <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">Pide el código de invitación al administrador de la familia.</p>
+                <div class="form-group">
+                    <label class="form-label">Código de Invitación</label>
+                    <input type="text" class="form-input" id="family-join-code" placeholder="Ej: a1b2c3d4" maxlength="8" style="font-family:var(--font-mono);font-size:20px;text-align:center;letter-spacing:4px;">
+                </div>
+                <div class="form-row" style="margin-top: 8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-join-family')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="joinFamily()">Unirme</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Notification Toast -->
         <div class="notification" id="toast"></div>
     </div>
@@ -1730,7 +1820,12 @@
     }
 
     function todayStr() {
-        return hnNow().toISOString().split('T')[0];
+        const now = new Date();
+        const hn = new Date(now.toLocaleString('en-US', { timeZone: HN_TZ }));
+        const y = hn.getFullYear();
+        const m = String(hn.getMonth() + 1).padStart(2, '0');
+        const d = String(hn.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
     }
 
     function nowTimeStr() {
@@ -1758,8 +1853,12 @@
 
     function getMonthRange() {
         const now = hnNow();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const startDay = new Date(y, m, 1);
+        const endDay = new Date(y, m + 1, 0);
+        const start = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+        const end = `${y}-${String(m + 1).padStart(2, '0')}-${String(endDay.getDate()).padStart(2, '0')}`;
         return { start, end };
     }
 
@@ -1955,7 +2054,8 @@
             loadCategories(),
             loadTransactions(),
             loadDebts(),
-            loadBudgets()
+            loadBudgets(),
+            loadFamilyData()
         ]);
         renderDashboard();
         updateSettingsUI();
@@ -2005,7 +2105,8 @@
 
         const titles = {
             dashboard: 'Dashboard', accounts: 'Mis Cuentas', transactions: 'Movimientos',
-            debts: 'Deudas', budgets: 'Presupuestos', reports: 'Reportes', settings: 'Configuración'
+            debts: 'Deudas', budgets: 'Presupuestos', reports: 'Reportes', settings: 'Configuración',
+            family: '👨‍👩‍👧‍👦 Familia'
         };
         document.getElementById('page-title').textContent = titles[page] || 'Mayordomía';
 
@@ -2016,6 +2117,7 @@
         else if (page === 'debts') renderDebtsPage();
         else if (page === 'budgets') renderBudgetsPage();
         else if (page === 'reports') renderReports();
+        else if (page === 'family') renderFamilyPage();
     }
 
     // ========================
@@ -2350,13 +2452,17 @@
                     const titheAmount = amount * (userProfile.tithe_percentage / 100);
                     const titheAccount = accounts.find(a => a.type === 'tithe');
                     if (titheAccount) {
-                        await supabaseClient.from('spiritual_allocations').insert({
-                            user_id: currentUser.id,
-                            type: 'tithe',
-                            amount: titheAmount,
-                            target_account_id: titheAccount.id,
-                            status: 'suggested'
-                        }).catch(() => {});
+                        try {
+                            await supabaseClient.from('spiritual_allocations').insert({
+                                user_id: currentUser.id,
+                                type: 'tithe',
+                                amount: titheAmount,
+                                target_account_id: titheAccount.id,
+                                status: 'suggested'
+                            });
+                        } catch (e) {
+                            console.warn('Spiritual allocation note saved:', e);
+                        }
                     }
                 }
             }
@@ -2748,6 +2854,224 @@
     }
 
     // ========================
+    // FAMILY MODULE
+    // ========================
+    let familyData = null;
+    let familyMembers = [];
+
+    async function loadFamilyData() {
+        // Check if user belongs to a family
+        const { data: memberData } = await supabaseClient.from('family_members')
+            .select('*, families(*)')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+
+        if (memberData && memberData.families) {
+            familyData = memberData.families;
+            familyData.myRole = memberData.role;
+
+            // Load all members
+            const { data: members } = await supabaseClient.from('family_members')
+                .select('*, users(id, full_name, email, currency)')
+                .eq('family_id', familyData.id);
+            familyMembers = members || [];
+        } else {
+            familyData = null;
+            familyMembers = [];
+        }
+    }
+
+    async function renderFamilyPage() {
+        await loadFamilyData();
+
+        if (!familyData) {
+            document.getElementById('family-no-group').style.display = 'block';
+            document.getElementById('family-group').style.display = 'none';
+            renderFamilySettings();
+            return;
+        }
+
+        document.getElementById('family-no-group').style.display = 'none';
+        document.getElementById('family-group').style.display = 'block';
+        document.getElementById('family-name').textContent = familyData.name;
+        document.getElementById('family-invite-code').textContent = familyData.invite_code;
+
+        // Render members
+        const membersList = document.getElementById('family-members-list');
+        membersList.innerHTML = familyMembers.map(m => `
+            <div class="card" style="margin-bottom:8px;padding:14px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:${m.user_id === currentUser.id ? 'var(--accent-primary)' : 'var(--bg-input)'};display:flex;align-items:center;justify-content:center;font-size:18px;">
+                        ${m.user_id === currentUser.id ? '👤' : '👥'}
+                    </div>
+                    <div style="flex:1;">
+                        <p style="font-weight:600;font-size:14px;">
+                            ${m.users?.full_name || m.users?.email || 'Usuario'}
+                            ${m.user_id === currentUser.id ? ' (Tú)' : ''}
+                        </p>
+                        <p style="font-size:12px;color:var(--text-muted);">${m.role === 'admin' ? '👑 Administrador' : '👤 Miembro'}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Load family financial summary
+        await loadFamilySummary();
+        renderFamilySettings();
+    }
+
+    async function loadFamilySummary() {
+        let totalBalance = 0;
+        let totalDebt = 0;
+        const summariesHtml = [];
+
+        for (const member of familyMembers) {
+            const uid = member.user_id;
+            const name = member.users?.full_name || 'Usuario';
+
+            // Accounts
+            const { data: accs } = await supabaseClient.from('accounts')
+                .select('balance, type').eq('user_id', uid).eq('is_active', true);
+            const memberBalance = (accs || []).reduce((s, a) => s + parseFloat(a.balance || 0), 0);
+            totalBalance += memberBalance;
+
+            // Debts
+            const { data: memberDebts } = await supabaseClient.from('debts')
+                .select('current_balance').eq('user_id', uid).eq('status', 'active');
+            const memberDebt = (memberDebts || []).reduce((s, d) => s + parseFloat(d.current_balance || 0), 0);
+            totalDebt += memberDebt;
+
+            // Month transactions
+            const { start, end } = getMonthRange();
+            const { data: txs } = await supabaseClient.from('transactions')
+                .select('type, amount').eq('user_id', uid)
+                .gte('date', start).lte('date', end);
+            const income = (txs || []).filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
+            const expense = (txs || []).filter(t => t.type === 'expense').reduce((s, t) => s + parseFloat(t.amount), 0);
+
+            summariesHtml.push(`
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="font-weight:600;font-size:14px;margin-bottom:10px;">
+                        ${uid === currentUser.id ? '👤' : '👥'} ${name}
+                    </p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                        <div>
+                            <p style="font-size:11px;color:var(--text-muted);">Balance</p>
+                            <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-primary);">${fmt(memberBalance)}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px;color:var(--text-muted);">Ingresos</p>
+                            <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-success);">${fmt(income)}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px;color:var(--text-muted);">Gastos</p>
+                            <p style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-danger);">${fmt(expense)}</p>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        document.getElementById('family-total-balance').textContent = fmt(totalBalance);
+        document.getElementById('family-total-debt').textContent = fmt(totalDebt);
+        document.getElementById('family-member-summaries').innerHTML = summariesHtml.join('');
+    }
+
+    function renderFamilySettings() {
+        const container = document.getElementById('family-settings-content');
+        if (familyData) {
+            container.innerHTML = `
+                <div class="settings-item" onclick="navigateTo('family')">
+                    <span>🏠</span>
+                    <p>${familyData.name}</p>
+                    <span style="color: var(--text-muted)">›</span>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="settings-item" onclick="openCreateFamilyModal()">
+                    <span>➕</span>
+                    <p>Crear Familia</p>
+                    <span style="color: var(--text-muted)">›</span>
+                </div>
+                <div class="settings-item" onclick="openJoinFamilyModal()">
+                    <span>🔗</span>
+                    <p>Unirse a Familia</p>
+                    <span style="color: var(--text-muted)">›</span>
+                </div>
+            `;
+        }
+    }
+
+    function openCreateFamilyModal() {
+        document.getElementById('family-create-name').value = '';
+        openModal('modal-create-family');
+    }
+
+    function openJoinFamilyModal() {
+        document.getElementById('family-join-code').value = '';
+        openModal('modal-join-family');
+    }
+
+    async function createFamily() {
+        const name = document.getElementById('family-create-name').value.trim();
+        if (!name) return showToast('Ingresa un nombre para la familia', 'error');
+
+        const { data: family, error } = await supabaseClient.from('families').insert({
+            name,
+            created_by: currentUser.id
+        }).select().single();
+
+        if (error) return showToast('Error: ' + error.message, 'error');
+
+        // Add creator as admin
+        await supabaseClient.from('family_members').insert({
+            family_id: family.id,
+            user_id: currentUser.id,
+            role: 'admin'
+        });
+
+        // Update user profile
+        await supabaseClient.from('users').update({ family_id: family.id }).eq('id', currentUser.id);
+
+        closeModal('modal-create-family');
+        showToast('🏠 ¡Familia creada! Comparte el código con tus familiares.');
+        navigateTo('family');
+    }
+
+    async function joinFamily() {
+        const code = document.getElementById('family-join-code').value.trim().toLowerCase();
+        if (!code) return showToast('Ingresa el código', 'error');
+
+        const { data: result, error } = await supabaseClient.rpc('join_family_by_code', {
+            p_invite_code: code
+        });
+
+        if (error) return showToast('Error: ' + error.message, 'error');
+        if (!result.success) return showToast(result.message, 'error');
+
+        closeModal('modal-join-family');
+        showToast(`🎉 ¡Te uniste a ${result.family_name}!`);
+        navigateTo('family');
+    }
+
+    function copyInviteCode() {
+        const code = document.getElementById('family-invite-code').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            showToast('📋 Código copiado');
+        }).catch(() => {
+            // Fallback
+            const temp = document.createElement('input');
+            temp.value = code;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast('📋 Código copiado');
+        });
+    }
+
+    // ========================
     // SETTINGS
     // ========================
     function updateSettingsUI() {
@@ -2756,6 +3080,7 @@
         document.getElementById('settings-spiritual').checked = userProfile.spiritual_module_enabled;
         document.getElementById('settings-tithe').textContent = userProfile.tithe_percentage;
         document.getElementById('settings-spiritual-options').style.display = userProfile.spiritual_module_enabled ? 'block' : 'none';
+        renderFamilySettings();
     }
 
     async function toggleSpiritual(enabled) {
