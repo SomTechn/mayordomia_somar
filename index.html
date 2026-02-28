@@ -1404,6 +1404,10 @@
 
                         <div class="section-title" style="margin-top:24px;"><span>📊 Finanzas Familiares</span></div>
                         
+                        <button class="btn btn-primary" style="margin-bottom:16px;" onclick="openFamilyTransferModal()">
+                            💸 Transferir a Familiar
+                        </button>
+                        
                         <div class="card" style="margin-bottom:12px;">
                             <div class="form-row">
                                 <div>
@@ -1497,7 +1501,7 @@
                 <div class="form-group">
                     <label class="form-label">📷 Foto de Respaldo (opcional)</label>
                     <div id="tx-photo-area" style="position:relative;">
-                        <input type="file" id="tx-photo" accept="image/*" capture="environment" 
+                        <input type="file" id="tx-photo" accept="image/*" 
                             style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;" 
                             onchange="previewPhoto(this)">
                         <div id="tx-photo-placeholder" style="
@@ -1683,6 +1687,79 @@
                 <div class="form-row" style="margin-top: 8px;">
                     <button class="btn btn-secondary" onclick="closeModal('modal-debt-payment')">Cancelar</button>
                     <button class="btn btn-primary" onclick="saveDebtPayment()">Registrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Manager Modal -->
+        <div class="modal-overlay" id="modal-categories">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">🏷️ Categorías</h3>
+                <div id="categories-list"></div>
+
+                <div id="cat-edit-section" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color);">
+                    <input type="hidden" id="cat-edit-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Ícono</label>
+                            <input type="text" class="form-input" id="cat-edit-icon" placeholder="📝" maxlength="4" style="text-align:center;font-size:24px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" id="cat-edit-type">
+                                <option value="expense">Gasto</option>
+                                <option value="income">Ingreso</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-input" id="cat-edit-name" placeholder="Nombre de la categoría">
+                    </div>
+                    <div class="form-row">
+                        <button class="btn btn-secondary" onclick="document.getElementById('cat-edit-section').style.display='none'">Cancelar</button>
+                        <button class="btn btn-primary" onclick="saveCategory()">Guardar</button>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:16px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-categories')">Cerrar</button>
+                    <button class="btn btn-primary" onclick="showAddCategory()">+ Nueva</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family Transfer Modal -->
+        <div class="modal-overlay" id="modal-family-transfer">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">👨‍👩‍👧 Transferencia Familiar</h3>
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Envía dinero a un miembro de tu familia</p>
+                
+                <div class="form-group">
+                    <label class="form-label">Destinatario</label>
+                    <select class="form-select" id="ft-member"></select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Monto</label>
+                    <input type="number" class="form-input" id="ft-amount" placeholder="0.00" inputmode="decimal" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Desde mi cuenta</label>
+                    <select class="form-select" id="ft-from-account"></select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripción (opcional)</label>
+                    <input type="text" class="form-input" id="ft-description" placeholder="Ej: Para la compra del super">
+                </div>
+
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-family-transfer')">Cancelar</button>
+                    <button class="btn btn-primary" id="btn-ft-send" onclick="sendFamilyTransfer()">Enviar 💸</button>
                 </div>
             </div>
         </div>
@@ -2075,8 +2152,14 @@
 
     async function loadTransactions() {
         const { data } = await supabaseClient.from('transactions').select('*, categories(name, icon)')
-            .eq('user_id', currentUser.id).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200);
+            .eq('user_id', currentUser.id).order('date', { ascending: false }).order('time', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(200);
         transactions = data || [];
+        // Extra sort in JS for reliable date+time ordering
+        transactions.sort((a, b) => {
+            const dateA = a.date + (a.time || '23:59');
+            const dateB = b.date + (b.time || '23:59');
+            return dateB.localeCompare(dateA);
+        });
     }
 
     async function loadDebts() {
@@ -2219,35 +2302,79 @@
             return;
         }
 
-        container.innerHTML = filtered.map(a => {
-            const goalHtml = a.type === 'savings' && a.goal_amount ? `
-                <div style="margin-top: 10px;">
-                    <div style="display:flex; justify-content:space-between; font-size:12px; color: var(--text-muted);">
-                        <span>Meta: ${fmt(a.goal_amount)}</span>
-                        <span>${Math.min(100, Math.round((a.balance / a.goal_amount) * 100))}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${Math.min(100, (a.balance / a.goal_amount) * 100)}%; background: var(--accent-success);"></div>
-                    </div>
-                </div>
-            ` : '';
+        // Group accounts by type
+        const typeNames = { bank: '🏦 Bancos', cash: '💵 Efectivo', savings: '💰 Ahorros', tithe: '📖 Diezmo', offering: '🙏 Ofrendas', firstfruits: '🌾 Primicias' };
+        const grouped = {};
+        filtered.forEach(a => {
+            const key = a.type;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(a);
+        });
 
-            return `
-                <div class="card">
-                    <div style="display:flex; align-items:center; gap:14px;">
-                        <div style="font-size:32px;">${ACCOUNT_ICONS[a.type] || '💳'}</div>
+        let html = '';
+        for (const [type, accs] of Object.entries(grouped)) {
+            const total = accs.reduce((s, a) => s + parseFloat(a.balance || 0), 0);
+            const hasMultiple = accs.length > 1;
+            const groupId = `acc-group-${type}`;
+
+            html += `
+                <div class="card" style="margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:14px;cursor:${hasMultiple ? 'pointer' : 'default'};" 
+                         ${hasMultiple ? `onclick="toggleAccountGroup('${groupId}')"` : ''}>
+                        <div style="font-size:28px;">${ACCOUNT_ICONS[type] || '💳'}</div>
                         <div style="flex:1;">
-                            <div style="font-weight:600; font-size:15px;">${a.name}</div>
-                            <div style="font-size:12px; color:var(--text-muted); text-transform:capitalize;">${a.type === 'bank' ? 'Banco' : a.type === 'cash' ? 'Efectivo' : a.type === 'savings' ? 'Ahorro' : a.type}</div>
+                            <div style="font-weight:600;font-size:15px;">${typeNames[type] || type}</div>
+                            <div style="font-size:12px;color:var(--text-muted);">${accs.length} cuenta${accs.length > 1 ? 's' : ''}</div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-family:var(--font-mono); font-size:18px; font-weight:700;">${fmt(a.balance)}</div>
+                            <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;">${fmt(total)}</div>
+                            ${hasMultiple ? '<div style="font-size:11px;color:var(--accent-primary);margin-top:2px;">Ver detalle ▾</div>' : ''}
                         </div>
                     </div>
-                    ${goalHtml}
+                    ${hasMultiple ? `<div id="${groupId}" style="display:none;margin-top:12px;border-top:1px solid var(--border-color);padding-top:12px;">` : (accs.length === 1 ? '' : '')}
+                    ${hasMultiple ? accs.map(a => renderAccountDetail(a)).join('') + '</div>' : ''}
+                    ${!hasMultiple && accs[0].type === 'savings' && accs[0].goal_amount ? renderSavingsGoal(accs[0]) : ''}
                 </div>
             `;
-        }).join('');
+        }
+        container.innerHTML = html;
+    }
+
+    function renderAccountDetail(a) {
+        return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-color);">
+                <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-input);display:flex;align-items:center;justify-content:center;font-size:16px;">
+                    ${ACCOUNT_ICONS[a.type] || '💳'}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:500;">${a.name}</div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:14px;font-weight:600;">${fmt(a.balance)}</div>
+            </div>
+            ${a.type === 'savings' && a.goal_amount ? renderSavingsGoal(a) : ''}
+        `;
+    }
+
+    function renderSavingsGoal(a) {
+        const pct = a.goal_amount > 0 ? Math.min(100, (a.balance / a.goal_amount) * 100) : 0;
+        return `
+            <div style="margin-top:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+                    <span>Meta: ${fmt(a.goal_amount)}</span>
+                    <span>${Math.round(pct)}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width:${pct}%;background:var(--accent-success);"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function toggleAccountGroup(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const isHidden = el.style.display === 'none';
+        el.style.display = isHidden ? 'block' : 'none';
     }
 
     function filterAccounts(el, filter) {
@@ -2275,6 +2402,11 @@
             const d = t.date;
             if (!groups[d]) groups[d] = [];
             groups[d].push(t);
+        });
+
+        // Sort each group by time descending
+        Object.values(groups).forEach(txs => {
+            txs.sort((a, b) => (b.time || '23:59').localeCompare(a.time || '23:59'));
         });
 
         container.innerHTML = Object.entries(groups).map(([date, txs]) => `
@@ -3054,7 +3186,6 @@
         navigator.clipboard.writeText(code).then(() => {
             showToast('📋 Código copiado');
         }).catch(() => {
-            // Fallback
             const temp = document.createElement('input');
             temp.value = code;
             document.body.appendChild(temp);
@@ -3063,6 +3194,69 @@
             document.body.removeChild(temp);
             showToast('📋 Código copiado');
         });
+    }
+
+    // ========================
+    // FAMILY TRANSFERS
+    // ========================
+    function openFamilyTransferModal() {
+        if (!familyData || familyMembers.length < 2) {
+            return showToast('Necesitas al menos 2 miembros en la familia', 'error');
+        }
+
+        // Populate members (exclude self)
+        const otherMembers = familyMembers.filter(m => m.user_id !== currentUser.id);
+        document.getElementById('ft-member').innerHTML = otherMembers.map(m => 
+            `<option value="${m.user_id}">👤 ${m.users?.full_name || m.users?.email || 'Miembro'}</option>`
+        ).join('');
+
+        // Populate my accounts (exclude spiritual)
+        const myAccounts = accounts.filter(a => !['tithe', 'offering', 'firstfruits'].includes(a.type));
+        document.getElementById('ft-from-account').innerHTML = myAccounts.map(a => 
+            `<option value="${a.id}">${ACCOUNT_ICONS[a.type]} ${a.name} (${fmt(a.balance)})</option>`
+        ).join('');
+
+        document.getElementById('ft-amount').value = '';
+        document.getElementById('ft-description').value = '';
+        document.getElementById('btn-ft-send').disabled = false;
+        openModal('modal-family-transfer');
+    }
+
+    async function sendFamilyTransfer() {
+        const toUserId = document.getElementById('ft-member').value;
+        const amount = parseFloat(document.getElementById('ft-amount').value);
+        const fromAccountId = document.getElementById('ft-from-account').value;
+        const description = document.getElementById('ft-description').value.trim();
+
+        if (!amount || amount <= 0) return showToast('Ingresa un monto válido', 'error');
+        if (!toUserId) return showToast('Selecciona un destinatario', 'error');
+
+        const fromAcc = accounts.find(a => a.id === fromAccountId);
+        if (fromAcc && parseFloat(fromAcc.balance) < amount) {
+            return showToast('Saldo insuficiente en esa cuenta', 'error');
+        }
+
+        document.getElementById('btn-ft-send').disabled = true;
+
+        try {
+            const { data: result, error } = await supabaseClient.rpc('family_transfer', {
+                p_from_user: currentUser.id,
+                p_to_user: toUserId,
+                p_amount: amount,
+                p_from_account_id: fromAccountId,
+                p_description: description || 'Transferencia familiar'
+            });
+
+            if (error) return showToast('Error: ' + error.message, 'error');
+            if (result && !result.success) return showToast(result.message || 'Error en la transferencia', 'error');
+
+            closeModal('modal-family-transfer');
+            showToast('💸 ¡Transferencia enviada!');
+            await loadAllData();
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+        document.getElementById('btn-ft-send').disabled = false;
     }
 
     // ========================
@@ -3085,7 +3279,83 @@
     }
 
     function openCategoriesManager() {
-        showToast('Gestión de categorías próximamente');
+        renderCategoriesModal();
+        openModal('modal-categories');
+    }
+
+    function renderCategoriesModal() {
+        const incomeCats = categories.filter(c => c.type === 'income');
+        const expenseCats = categories.filter(c => c.type === 'expense');
+
+        document.getElementById('categories-list').innerHTML = `
+            <h4 style="font-size:14px;color:var(--accent-success);margin-bottom:10px;">💵 Ingresos</h4>
+            ${incomeCats.map(c => renderCategoryItem(c)).join('')}
+            <div style="margin:16px 0 10px;">
+                <h4 style="font-size:14px;color:var(--accent-danger);">🛒 Gastos</h4>
+            </div>
+            ${expenseCats.map(c => renderCategoryItem(c)).join('')}
+        `;
+    }
+
+    function renderCategoryItem(c) {
+        return `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color);">
+                <span style="font-size:20px;">${c.icon}</span>
+                <span style="flex:1;font-size:14px;">${c.name}</span>
+                <button onclick="editCategory('${c.id}','${c.name}','${c.icon}','${c.type}')" 
+                    style="background:none;border:none;color:var(--accent-primary);font-size:13px;cursor:pointer;padding:4px 8px;">✏️</button>
+                <button onclick="deleteCategory('${c.id}','${c.name}')" 
+                    style="background:none;border:none;color:var(--accent-danger);font-size:13px;cursor:pointer;padding:4px 8px;">🗑️</button>
+            </div>
+        `;
+    }
+
+    function showAddCategory() {
+        document.getElementById('cat-edit-id').value = '';
+        document.getElementById('cat-edit-name').value = '';
+        document.getElementById('cat-edit-icon').value = '📝';
+        document.getElementById('cat-edit-type').value = 'expense';
+        document.getElementById('cat-edit-section').style.display = 'block';
+    }
+
+    function editCategory(id, name, icon, type) {
+        document.getElementById('cat-edit-id').value = id;
+        document.getElementById('cat-edit-name').value = name;
+        document.getElementById('cat-edit-icon').value = icon;
+        document.getElementById('cat-edit-type').value = type;
+        document.getElementById('cat-edit-section').style.display = 'block';
+    }
+
+    async function saveCategory() {
+        const id = document.getElementById('cat-edit-id').value;
+        const name = document.getElementById('cat-edit-name').value.trim();
+        const icon = document.getElementById('cat-edit-icon').value.trim() || '📝';
+        const type = document.getElementById('cat-edit-type').value;
+
+        if (!name) return showToast('Ingresa un nombre', 'error');
+
+        if (id) {
+            const { error } = await supabaseClient.from('categories').update({ name, icon, type }).eq('id', id);
+            if (error) return showToast('Error: ' + error.message, 'error');
+            showToast('Categoría actualizada');
+        } else {
+            const { error } = await supabaseClient.from('categories').insert({ user_id: currentUser.id, name, icon, type, is_default: false });
+            if (error) return showToast('Error: ' + error.message, 'error');
+            showToast('Categoría creada');
+        }
+
+        document.getElementById('cat-edit-section').style.display = 'none';
+        await loadCategories();
+        renderCategoriesModal();
+    }
+
+    async function deleteCategory(id, name) {
+        if (!confirm(`¿Eliminar categoría "${name}"?`)) return;
+        const { error } = await supabaseClient.from('categories').delete().eq('id', id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+        showToast('Categoría eliminada');
+        await loadCategories();
+        renderCategoriesModal();
     }
 
     function openProfileEdit() {
