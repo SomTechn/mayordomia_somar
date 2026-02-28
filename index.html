@@ -776,18 +776,26 @@
 
         /* ===== AUTH SCREENS ===== */
         .auth-screen {
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 24px;
             text-align: center;
+            position: relative;
+            overflow-y: auto;
         }
 
         .auth-logo {
             font-size: 56px;
             margin-bottom: 16px;
+            animation: authPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes authPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
         }
 
         .auth-title {
@@ -805,7 +813,7 @@
 
         .auth-form {
             width: 100%;
-            max-width: 360px;
+            max-width: 380px;
         }
 
         .auth-divider {
@@ -828,6 +836,135 @@
             color: var(--accent-primary);
             cursor: pointer;
             font-weight: 500;
+        }
+
+        /* Login View */
+        #auth-login-view, #auth-register-view {
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        /* Register View - distinct look */
+        #auth-register-view {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .register-header {
+            background: linear-gradient(135deg, rgba(34,211,238,0.1), rgba(168,85,247,0.1));
+            border: 1px solid rgba(34,211,238,0.15);
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 24px;
+        }
+
+        .register-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .register-header p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .register-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .register-feature {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .register-feature span {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .register-feature small {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        .password-strength {
+            height: 4px;
+            border-radius: 2px;
+            background: var(--bg-input);
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .password-strength-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s, background 0.3s;
+            width: 0%;
+        }
+
+        .password-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-align: left;
+        }
+
+        .register-step-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .register-step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .register-step-dot.active {
+            background: var(--accent-primary);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .register-step-dot.done {
+            background: var(--accent-success);
+        }
+
+        .reg-step { display: none; }
+        .reg-step.active { display: block; animation: fadeSlideUp 0.3s ease; }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .terms-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            text-align: left;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 16px 0;
+        }
+
+        .terms-check input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: var(--accent-primary);
+            min-width: 18px;
+            min-height: 18px;
         }
 
         /* ===== ONBOARDING ===== */
@@ -1079,21 +1216,132 @@
     <div id="app">
         <!-- Auth Screen -->
         <div id="auth-screen" class="auth-screen">
-            <div class="auth-logo">💰</div>
-            <h1 class="auth-title">Mayordomía</h1>
-            <p class="auth-subtitle">Control financiero inteligente</p>
-            <div class="auth-form">
-                <div class="form-group">
-                    <input type="email" class="form-input" id="auth-email" placeholder="Correo electrónico">
+            
+            <!-- === LOGIN VIEW === -->
+            <div id="auth-login-view">
+                <div class="auth-logo">💰</div>
+                <h1 class="auth-title">Mayordomía</h1>
+                <p class="auth-subtitle">Control financiero inteligente</p>
+                <div class="auth-form">
+                    <div class="form-group">
+                        <input type="email" class="form-input" id="login-email" placeholder="Correo electrónico" autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-input" id="login-password" placeholder="Contraseña" autocomplete="current-password">
+                    </div>
+                    <button class="btn btn-primary" id="btn-login">Iniciar Sesión</button>
+                    <p style="margin-top: 12px; font-size: 13px; color: var(--text-muted)">
+                        <span class="auth-link" id="btn-forgot">¿Olvidaste tu contraseña?</span>
+                    </p>
+                    <div class="auth-divider">¿No tienes cuenta?</div>
+                    <button class="btn btn-secondary" onclick="showAuthView('register')">Crear Cuenta Gratis</button>
                 </div>
-                <div class="form-group">
-                    <input type="password" class="form-input" id="auth-password" placeholder="Contraseña">
+            </div>
+
+            <!-- === REGISTER VIEW === -->
+            <div id="auth-register-view" style="display:none;">
+                <div class="register-header">
+                    <div style="font-size:40px;margin-bottom:8px;">🌟</div>
+                    <h2>Crea tu Cuenta</h2>
+                    <p>Empieza a tomar control de tus finanzas</p>
                 </div>
-                <button class="btn btn-primary" id="btn-login">Iniciar Sesión</button>
-                <div class="auth-divider">o</div>
-                <button class="btn btn-secondary" id="btn-register">Crear Cuenta</button>
-                <p style="margin-top: 16px; font-size: 13px; color: var(--text-muted)">
-                    <span class="auth-link" id="btn-forgot">¿Olvidaste tu contraseña?</span>
+
+                <!-- Step dots -->
+                <div class="register-step-dots">
+                    <div class="register-step-dot active" id="reg-dot-1"></div>
+                    <div class="register-step-dot" id="reg-dot-2"></div>
+                    <div class="register-step-dot" id="reg-dot-3"></div>
+                </div>
+
+                <!-- Step 1: Personal Info -->
+                <div class="reg-step active" id="reg-step-1">
+                    <div class="form-group">
+                        <label class="form-label">¿Cómo te llamas?</label>
+                        <input type="text" class="form-input" id="reg-name" placeholder="Tu nombre completo" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Correo electrónico</label>
+                        <input type="email" class="form-input" id="reg-email" placeholder="tu@correo.com" autocomplete="email">
+                    </div>
+                    <button class="btn btn-primary" onclick="regNextStep(2)">Continuar →</button>
+                </div>
+
+                <!-- Step 2: Security -->
+                <div class="reg-step" id="reg-step-2">
+                    <div class="form-group">
+                        <label class="form-label">Crea una contraseña</label>
+                        <input type="password" class="form-input" id="reg-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" oninput="updatePasswordStrength()">
+                        <div class="password-strength"><div class="password-strength-fill" id="pw-strength-bar"></div></div>
+                        <div class="password-hint" id="pw-hint">Usa letras, números y símbolos para mayor seguridad</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirma tu contraseña</label>
+                        <input type="password" class="form-input" id="reg-password-confirm" placeholder="Repite la contraseña" autocomplete="new-password">
+                    </div>
+                    <div class="form-row">
+                        <button class="btn btn-secondary" onclick="regNextStep(1)">← Atrás</button>
+                        <button class="btn btn-primary" onclick="regNextStep(3)">Continuar →</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Preferences -->
+                <div class="reg-step" id="reg-step-3">
+                    <div class="form-group" style="text-align:left;">
+                        <label class="form-label">Tu moneda principal</label>
+                        <div class="currency-grid">
+                            <div class="currency-option selected" data-currency="HNL" onclick="selectRegCurrency(this)">
+                                <span>🇭🇳</span>
+                                <small>Lempiras (L)</small>
+                            </div>
+                            <div class="currency-option" data-currency="USD" onclick="selectRegCurrency(this)">
+                                <span>🇺🇸</span>
+                                <small>Dólares ($)</small>
+                            </div>
+                            <div class="currency-option" data-currency="EUR" onclick="selectRegCurrency(this)">
+                                <span>🇪🇺</span>
+                                <small>Euros (€)</small>
+                            </div>
+                            <div class="currency-option" data-currency="GTQ" onclick="selectRegCurrency(this)">
+                                <span>🇬🇹</span>
+                                <small>Quetzales (Q)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="text-align:left;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;">
+                            <div>
+                                <p style="font-weight:600;font-size:14px;">✝️ Módulo Espiritual</p>
+                                <small style="font-size:11px;color:var(--text-muted);">Diezmos, ofrendas y primicias</small>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="reg-spiritual">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="terms-check">
+                        <input type="checkbox" id="reg-terms">
+                        <span>Acepto que mi información será utilizada para gestionar mis finanzas personales de forma segura.</span>
+                    </div>
+
+                    <div class="form-row">
+                        <button class="btn btn-secondary" onclick="regNextStep(2)">← Atrás</button>
+                        <button class="btn btn-primary" id="btn-register" onclick="completeRegistration()">Crear Cuenta 🚀</button>
+                    </div>
+                </div>
+
+                <!-- Features showcase -->
+                <div class="register-features" style="margin-top:20px;">
+                    <div class="register-feature"><span>📊</span><small>Dashboard inteligente con resumen completo</small></div>
+                    <div class="register-feature"><span>👨‍👩‍👧</span><small>Finanzas familiares compartidas</small></div>
+                    <div class="register-feature"><span>📱</span><small>App instalable que funciona offline</small></div>
+                    <div class="register-feature"><span>🔒</span><small>Datos seguros y encriptados</small></div>
+                </div>
+
+                <p style="margin-top:16px;font-size:13px;color:var(--text-muted);">
+                    ¿Ya tienes cuenta? <span class="auth-link" onclick="showAuthView('login')">Inicia Sesión</span>
                 </p>
             </div>
         </div>
@@ -1986,35 +2234,196 @@
     // ========================
     // AUTH
     // ========================
+    let regCurrency = 'HNL';
+
+    function showAuthView(view) {
+        if (view === 'register') {
+            document.getElementById('auth-login-view').style.display = 'none';
+            document.getElementById('auth-register-view').style.display = 'block';
+            regNextStep(1);
+        } else {
+            document.getElementById('auth-login-view').style.display = 'block';
+            document.getElementById('auth-register-view').style.display = 'none';
+        }
+    }
+
+    function regNextStep(step) {
+        // Validate before advancing
+        if (step === 2) {
+            const name = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            if (document.getElementById('reg-step-1').classList.contains('active')) {
+                if (!name) return showToast('Ingresa tu nombre', 'error');
+                if (!email || !email.includes('@')) return showToast('Ingresa un correo válido', 'error');
+            }
+        }
+        if (step === 3) {
+            const pw = document.getElementById('reg-password').value;
+            const pw2 = document.getElementById('reg-password-confirm').value;
+            if (document.getElementById('reg-step-2').classList.contains('active')) {
+                if (pw.length < 6) return showToast('La contraseña necesita al menos 6 caracteres', 'error');
+                if (pw !== pw2) return showToast('Las contraseñas no coinciden', 'error');
+            }
+        }
+
+        document.querySelectorAll('.reg-step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`reg-step-${step}`).classList.add('active');
+
+        // Update dots
+        for (let i = 1; i <= 3; i++) {
+            const dot = document.getElementById(`reg-dot-${i}`);
+            dot.classList.remove('active', 'done');
+            if (i === step) dot.classList.add('active');
+            else if (i < step) dot.classList.add('done');
+        }
+    }
+
+    function selectRegCurrency(el) {
+        document.querySelectorAll('#reg-step-3 .currency-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        regCurrency = el.dataset.currency;
+    }
+
+    function updatePasswordStrength() {
+        const pw = document.getElementById('reg-password').value;
+        const bar = document.getElementById('pw-strength-bar');
+        const hint = document.getElementById('pw-hint');
+        let score = 0;
+        if (pw.length >= 6) score++;
+        if (pw.length >= 10) score++;
+        if (/[A-Z]/.test(pw)) score++;
+        if (/[0-9]/.test(pw)) score++;
+        if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+        const levels = [
+            { width: '0%', color: 'var(--border-color)', text: 'Usa letras, números y símbolos para mayor seguridad' },
+            { width: '20%', color: '#f87171', text: '⚠️ Muy débil' },
+            { width: '40%', color: '#fb923c', text: '🔸 Débil' },
+            { width: '60%', color: '#fbbf24', text: '🔹 Aceptable' },
+            { width: '80%', color: '#34d399', text: '✅ Fuerte' },
+            { width: '100%', color: '#22d3ee', text: '🛡️ Muy segura' }
+        ];
+        const level = levels[Math.min(score, 5)];
+        bar.style.width = level.width;
+        bar.style.background = level.color;
+        hint.textContent = level.text;
+    }
+
+    async function completeRegistration() {
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const spiritual = document.getElementById('reg-spiritual').checked;
+        const terms = document.getElementById('reg-terms').checked;
+
+        if (!terms) return showToast('Acepta los términos para continuar', 'error');
+
+        document.getElementById('btn-register').disabled = true;
+        document.getElementById('btn-register').textContent = '⏳ Creando...';
+
+        try {
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+                document.getElementById('btn-register').disabled = false;
+                document.getElementById('btn-register').textContent = 'Crear Cuenta 🚀';
+                return showToast(error.message, 'error');
+            }
+            currentUser = data.user;
+
+            // Create profile directly (skip old onboarding)
+            await supabaseClient.from('users').upsert({
+                id: currentUser.id,
+                email,
+                full_name: name,
+                currency: regCurrency,
+                spiritual_module_enabled: spiritual,
+                tithe_percentage: 10
+            });
+
+            // Create default categories
+            const defCats = [
+                { name: 'Salario', type: 'income', icon: '💵' },
+                { name: 'Freelance', type: 'income', icon: '💻' },
+                { name: 'Negocio', type: 'income', icon: '🏪' },
+                { name: 'Regalo', type: 'income', icon: '🎁' },
+                { name: 'Otro Ingreso', type: 'income', icon: '📥' },
+                { name: 'Combustible', type: 'expense', icon: '⛽' },
+                { name: 'Internet Móvil', type: 'expense', icon: '📱' },
+                { name: 'Wifi', type: 'expense', icon: '📶' },
+                { name: 'Colegiatura', type: 'expense', icon: '🎓' },
+                { name: 'Carro', type: 'expense', icon: '🚗' },
+                { name: 'Moto', type: 'expense', icon: '🏍️' },
+                { name: 'Préstamo', type: 'expense', icon: '🏦' },
+                { name: 'Supermercado', type: 'expense', icon: '🛒' },
+                { name: 'Pulpería', type: 'expense', icon: '🏪' },
+                { name: 'Chucherías', type: 'expense', icon: '🍬' },
+                { name: 'Comidas Fuera', type: 'expense', icon: '🍔' },
+                { name: 'Alquiler', type: 'expense', icon: '🏠' },
+                { name: 'Electricidad', type: 'expense', icon: '⚡' },
+                { name: 'Agua', type: 'expense', icon: '💧' },
+                { name: 'Salud', type: 'expense', icon: '🏥' },
+                { name: 'Transporte', type: 'expense', icon: '🚌' },
+                { name: 'Entretenimiento', type: 'expense', icon: '🎬' },
+                { name: 'Ropa', type: 'expense', icon: '👕' },
+                { name: 'Educación', type: 'expense', icon: '📚' },
+                { name: 'Otro Gasto', type: 'expense', icon: '📤' },
+            ];
+            if (spiritual) {
+                defCats.push({ name: 'Diezmo', type: 'expense', icon: '📖' });
+                defCats.push({ name: 'Ofrenda', type: 'expense', icon: '🙏' });
+                defCats.push({ name: 'Primicias', type: 'expense', icon: '🌾' });
+            }
+            const catsToInsert = defCats.map(c => ({ ...c, user_id: currentUser.id, is_default: true }));
+            await supabaseClient.from('categories').insert(catsToInsert);
+
+            // Create default accounts
+            const defAccounts = [
+                { name: 'Efectivo', type: 'cash', balance: 0 },
+                { name: 'Banco', type: 'bank', balance: 0 },
+            ];
+            if (spiritual) {
+                defAccounts.push({ name: 'Fondo de Diezmo', type: 'tithe', balance: 0 });
+                defAccounts.push({ name: 'Fondo de Ofrendas', type: 'offering', balance: 0 });
+            }
+            const accsToInsert = defAccounts.map(a => ({ ...a, user_id: currentUser.id }));
+            await supabaseClient.from('accounts').insert(accsToInsert);
+
+            // Go straight to app
+            await checkProfile();
+            showToast(`🎉 ¡Bienvenido/a ${name}!`);
+
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+        document.getElementById('btn-register').disabled = false;
+        document.getElementById('btn-register').textContent = 'Crear Cuenta 🚀';
+    }
+
+    // Login handler
     document.getElementById('btn-login').onclick = async () => {
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
         if (!email || !password) return showToast('Completa todos los campos', 'error');
         
+        document.getElementById('btn-login').disabled = true;
+        document.getElementById('btn-login').textContent = '⏳ Entrando...';
+        
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        
+        document.getElementById('btn-login').disabled = false;
+        document.getElementById('btn-login').textContent = 'Iniciar Sesión';
+        
         if (error) return showToast(error.message, 'error');
         currentUser = data.user;
         await checkProfile();
     };
 
-    document.getElementById('btn-register').onclick = async () => {
-        const email = document.getElementById('auth-email').value.trim();
-        const password = document.getElementById('auth-password').value;
-        if (!email || !password) return showToast('Completa todos los campos', 'error');
-        if (password.length < 6) return showToast('La contraseña debe tener al menos 6 caracteres', 'error');
-        
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) return showToast(error.message, 'error');
-        currentUser = data.user;
-        showOnboarding();
-    };
-
     document.getElementById('btn-forgot').onclick = async () => {
-        const email = document.getElementById('auth-email').value.trim();
+        const email = document.getElementById('login-email').value.trim();
         if (!email) return showToast('Ingresa tu correo primero', 'error');
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
         if (error) return showToast(error.message, 'error');
-        showToast('Se envió un enlace a tu correo');
+        showToast('📧 Se envió un enlace a tu correo');
     };
 
     async function logout() {
@@ -2023,6 +2432,7 @@
         userProfile = null;
         document.getElementById('main-app').style.display = 'none';
         document.getElementById('auth-screen').style.display = 'flex';
+        showAuthView('login');
     }
 
     // ========================
