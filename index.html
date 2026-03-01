@@ -2363,12 +2363,21 @@
                 console.warn('Photo upload error:', error.message);
                 return null;
             }
-            const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(fileName);
-            return urlData?.publicUrl || null;
+            // Store the file path, not public URL (works with private buckets)
+            return fileName;
         } catch (err) {
             console.warn('Photo upload failed:', err);
             return null;
         }
+    }
+
+    async function getReceiptUrl(receiptPath) {
+        if (!receiptPath) return null;
+        // If it's already a full URL (old data), return as-is
+        if (receiptPath.startsWith('http')) return receiptPath;
+        // Generate a signed URL valid for 1 hour
+        const { data, error } = await supabaseClient.storage.from('receipts').createSignedUrl(receiptPath, 3600);
+        return data?.signedUrl || null;
     }
 
     // ========================
@@ -3082,8 +3091,12 @@
         // Receipt photo
         if (t.receipt_url) {
             document.getElementById('txd-receipt').style.display = 'block';
-            document.getElementById('txd-receipt-img').src = t.receipt_url;
-            document.getElementById('txd-receipt-img').onclick = () => window.open(t.receipt_url, '_blank');
+            getReceiptUrl(t.receipt_url).then(url => {
+                if (url) {
+                    document.getElementById('txd-receipt-img').src = url;
+                    document.getElementById('txd-receipt-img').onclick = () => window.open(url, '_blank');
+                }
+            });
         } else {
             document.getElementById('txd-receipt').style.display = 'none';
         }
