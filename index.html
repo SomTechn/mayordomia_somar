@@ -1491,6 +1491,9 @@
                         </div>
                     </div>
 
+                    <!-- Budget Alerts -->
+                    <div id="budget-alerts" style="display:none;"></div>
+
                     <div class="section-title">
                         <span>Últimos Movimientos</span>
                         <small onclick="navigateTo('transactions')">Ver todo</small>
@@ -1514,6 +1517,22 @@
 
                 <!-- === TRANSACTIONS PAGE === -->
                 <div id="page-transactions" class="page">
+                    <!-- Search bar -->
+                    <div style="position:relative;margin-bottom:12px;">
+                        <input type="text" class="form-input" id="tx-search" placeholder="🔍 Buscar movimiento..." oninput="renderTransactionsPage()" style="padding-left:14px;">
+                    </div>
+                    <!-- Date range filter -->
+                    <div class="form-row" style="margin-bottom:12px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:11px;">Desde</label>
+                            <input type="date" class="form-input" id="tx-filter-from" onchange="renderTransactionsPage()" style="font-size:13px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-size:11px;">Hasta</label>
+                            <input type="date" class="form-input" id="tx-filter-to" onchange="renderTransactionsPage()" style="font-size:13px;">
+                        </div>
+                        <button onclick="clearTxFilters()" style="background:none;border:none;color:var(--accent-primary);font-size:12px;white-space:nowrap;cursor:pointer;padding-top:20px;">Limpiar</button>
+                    </div>
                     <div class="tabs">
                         <button class="tab active" onclick="filterTransactions(this, 'all')">Todo</button>
                         <button class="tab" onclick="filterTransactions(this, 'income')">Ingresos</button>
@@ -1521,6 +1540,7 @@
                         <button class="tab" onclick="filterTransactions(this, 'transfer')">Transfer</button>
                     </div>
                     <div id="all-transactions"></div>
+                    <button class="btn btn-secondary" style="margin-top:16px;" onclick="exportTransactions()">📤 Exportar a CSV</button>
                 </div>
 
                 <!-- === DEBTS PAGE === -->
@@ -1606,6 +1626,14 @@
                             <span>🏷️</span>
                             <p>Gestionar Categorías</p>
                             <span style="color: var(--text-muted)">›</span>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="settings-group-title">🔄 Gastos Recurrentes</div>
+                        <div id="recurring-list"></div>
+                        <div class="settings-item" onclick="openRecurringModal()" style="border-color:rgba(34,211,238,0.2);">
+                            <span>➕</span>
+                            <p style="color:var(--accent-primary);">Agregar Gasto Recurrente</p>
                         </div>
                     </div>
                     <div class="settings-group">
@@ -1935,6 +1963,118 @@
                 <div class="form-row" style="margin-top: 8px;">
                     <button class="btn btn-secondary" onclick="closeModal('modal-debt-payment')">Cancelar</button>
                     <button class="btn btn-primary" onclick="saveDebtPayment()">Registrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Detail Modal -->
+        <div class="modal-overlay" id="modal-tx-detail">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title" id="txd-title">Detalle</h3>
+                
+                <div id="txd-receipt" style="display:none;margin-bottom:16px;">
+                    <img id="txd-receipt-img" style="width:100%;max-height:200px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;">
+                </div>
+
+                <div id="txd-view-mode">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div id="txd-icon" style="font-size:40px;margin-bottom:8px;"></div>
+                        <div id="txd-amount" style="font-family:var(--font-mono);font-size:28px;font-weight:700;"></div>
+                        <div id="txd-category" style="font-size:14px;color:var(--text-muted);margin-top:4px;"></div>
+                    </div>
+                    <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                            <span style="color:var(--text-muted);font-size:13px;">Descripción</span>
+                            <span id="txd-desc" style="font-size:13px;font-weight:500;"></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                            <span style="color:var(--text-muted);font-size:13px;">Cuenta</span>
+                            <span id="txd-account" style="font-size:13px;font-weight:500;"></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                            <span style="color:var(--text-muted);font-size:13px;">Fecha</span>
+                            <span id="txd-date" style="font-size:13px;font-weight:500;"></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:var(--text-muted);font-size:13px;">Hora</span>
+                            <span id="txd-time" style="font-size:13px;font-weight:500;"></span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <button class="btn btn-secondary" onclick="closeModal('modal-tx-detail')">Cerrar</button>
+                        <button class="btn btn-primary" onclick="editTransactionFromDetail()">✏️ Editar</button>
+                    </div>
+                    <button class="btn" onclick="deleteTransaction()" style="width:100%;margin-top:8px;background:rgba(248,113,113,0.1);color:var(--accent-danger);border:1px solid rgba(248,113,113,0.2);">🗑️ Eliminar</button>
+                </div>
+
+                <div id="txd-edit-mode" style="display:none;">
+                    <input type="hidden" id="txd-edit-id">
+                    <input type="hidden" id="txd-edit-type">
+                    <input type="hidden" id="txd-edit-old-amount">
+                    <input type="hidden" id="txd-edit-old-account">
+                    <div class="form-group">
+                        <label class="form-label">Monto</label>
+                        <input type="number" class="form-input" id="txd-edit-amount" step="0.01" inputmode="decimal">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" class="form-input" id="txd-edit-desc">
+                    </div>
+                    <div class="form-group" id="txd-edit-cat-group">
+                        <label class="form-label">Categoría</label>
+                        <select class="form-select" id="txd-edit-category"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cuenta</label>
+                        <select class="form-select" id="txd-edit-account"></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" class="form-input" id="txd-edit-date">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hora</label>
+                            <input type="time" class="form-input" id="txd-edit-time">
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-top:8px;">
+                        <button class="btn btn-secondary" onclick="cancelEditTransaction()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="saveEditTransaction()">💾 Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recurring Transaction Modal -->
+        <div class="modal-overlay" id="modal-recurring">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">🔄 Gasto Recurrente</h3>
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <input type="text" class="form-input" id="rec-description" placeholder="Ej: Pago de Internet">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Monto</label>
+                    <input type="number" class="form-input" id="rec-amount" placeholder="0.00" inputmode="decimal" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-select" id="rec-category"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cuenta</label>
+                    <select class="form-select" id="rec-account"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Día del mes a cobrar</label>
+                    <input type="number" class="form-input" id="rec-day" min="1" max="28" placeholder="15" value="1">
+                </div>
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-recurring')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveRecurring()">Guardar</button>
                 </div>
             </div>
         </div>
@@ -2542,8 +2682,10 @@
             loadTransactions(),
             loadDebts(),
             loadBudgets(),
-            loadFamilyData()
+            loadFamilyData(),
+            loadRecurring()
         ]);
+        await processRecurringTransactions();
         renderDashboard();
         updateSettingsUI();
     }
@@ -2616,7 +2758,7 @@
     // ========================
     // DASHBOARD RENDER
     // ========================
-    function renderDashboard() {
+    async function renderDashboard() {
         // Total balance
         const totalBalance = accounts.reduce((sum, a) => sum + parseFloat(a.balance || 0), 0);
         const spiritualAccounts = accounts.filter(a => ['tithe', 'offering', 'firstfruits'].includes(a.type));
@@ -2653,14 +2795,33 @@
         // Spiritual summary
         if (userProfile?.spiritual_module_enabled) {
             document.getElementById('spiritual-summary').style.display = 'block';
-            const tithePending = monthIncome * (userProfile.tithe_percentage / 100);
-            const tithePaid = monthTxs.filter(t => t.type === 'expense' && categories.find(c => c.id === t.category_id)?.name === 'Diezmo')
-                .reduce((s, t) => s + parseFloat(t.amount), 0);
-            const offeringsPaid = monthTxs.filter(t => t.type === 'expense' && categories.find(c => c.id === t.category_id)?.name === 'Ofrenda')
-                .reduce((s, t) => s + parseFloat(t.amount), 0);
+            
+            // Query ALL income total from DB (not limited to 200)
+            const { data: incomeData } = await supabaseClient.from('transactions')
+                .select('amount').eq('user_id', currentUser.id).eq('type', 'income');
+            const allIncome = (incomeData || []).reduce((s, t) => s + parseFloat(t.amount), 0);
+            const totalTitheOwed = allIncome * (userProfile.tithe_percentage / 100);
+            
+            // Query ALL tithe payments
+            const titheCategory = categories.find(c => c.name === 'Diezmo');
+            let totalTithePaid = 0;
+            if (titheCategory) {
+                const { data: titheData } = await supabaseClient.from('transactions')
+                    .select('amount').eq('user_id', currentUser.id).eq('type', 'expense').eq('category_id', titheCategory.id);
+                totalTithePaid = (titheData || []).reduce((s, t) => s + parseFloat(t.amount), 0);
+            }
 
-            document.getElementById('tithe-pending').textContent = fmt(Math.max(0, tithePending - tithePaid));
-            document.getElementById('offerings-given').textContent = fmt(offeringsPaid);
+            // Query ALL offering payments
+            const offeringCategory = categories.find(c => c.name === 'Ofrenda');
+            let totalOfferingsPaid = 0;
+            if (offeringCategory) {
+                const { data: offData } = await supabaseClient.from('transactions')
+                    .select('amount').eq('user_id', currentUser.id).eq('type', 'expense').eq('category_id', offeringCategory.id);
+                totalOfferingsPaid = (offData || []).reduce((s, t) => s + parseFloat(t.amount), 0);
+            }
+
+            document.getElementById('tithe-pending').textContent = fmt(Math.max(0, totalTitheOwed - totalTithePaid));
+            document.getElementById('offerings-given').textContent = fmt(totalOfferingsPaid);
             document.getElementById('firstfruits-given').textContent = fmt(0);
         } else {
             document.getElementById('spiritual-summary').style.display = 'none';
@@ -2673,6 +2834,39 @@
             recentTx.innerHTML = '<div class="empty-state"><span>📝</span><p>No hay movimientos aún</p></div>';
         } else {
             recentTx.innerHTML = recent.map(t => renderTransactionItem(t)).join('');
+        }
+
+        // Budget alerts
+        const alertsEl = document.getElementById('budget-alerts');
+        if (budgets.length > 0) {
+            const alerts = [];
+            budgets.forEach(b => {
+                const cat = categories.find(c => c.id === b.category_id);
+                const catExpense = monthTxs.filter(t => t.type === 'expense' && t.category_id === b.category_id)
+                    .reduce((s, t) => s + parseFloat(t.amount), 0);
+                const pct = b.amount > 0 ? Math.round((catExpense / b.amount) * 100) : 0;
+
+                if (pct >= 90) {
+                    const exceeded = catExpense > b.amount;
+                    alerts.push(`
+                        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${exceeded ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)'};border:1px solid ${exceeded ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.3)'};border-radius:var(--radius-sm);margin-bottom:8px;">
+                            <span style="font-size:20px;">${exceeded ? '🚨' : '⚠️'}</span>
+                            <div style="flex:1;">
+                                <p style="font-size:13px;font-weight:600;">${cat?.icon || ''} ${cat?.name || 'Categoría'}</p>
+                                <p style="font-size:11px;color:var(--text-muted);">${exceeded ? 'Excediste' : 'Casi al límite'}: ${fmt(catExpense)} de ${fmt(b.amount)} (${pct}%)</p>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+            if (alerts.length > 0) {
+                alertsEl.style.display = 'block';
+                alertsEl.innerHTML = `<div class="section-title"><span>⚠️ Alertas</span></div>` + alerts.join('');
+            } else {
+                alertsEl.style.display = 'none';
+            }
+        } else {
+            alertsEl.style.display = 'none';
         }
     }
 
@@ -2689,7 +2883,7 @@
         const photoIcon = t.receipt_url ? ' 📎' : '';
         
         return `
-            <div class="transaction-item" ${t.receipt_url ? `onclick="window.open('${t.receipt_url}','_blank')"` : ''}>
+            <div class="transaction-item" onclick="openTxDetail('${t.id}')" style="cursor:pointer;">
                 <div class="transaction-icon" style="background: ${bgColor}">${icon}</div>
                 <div class="transaction-info">
                     <div class="transaction-name">${t.description || catName}${photoIcon}</div>
@@ -2798,7 +2992,24 @@
     // TRANSACTIONS PAGE
     // ========================
     function renderTransactionsPage() {
-        const filtered = currentTxFilter === 'all' ? transactions : transactions.filter(t => t.type === currentTxFilter);
+        let filtered = currentTxFilter === 'all' ? [...transactions] : transactions.filter(t => t.type === currentTxFilter);
+
+        // Search filter
+        const search = (document.getElementById('tx-search')?.value || '').toLowerCase().trim();
+        if (search) {
+            filtered = filtered.filter(t => {
+                const cat = categories.find(c => c.id === t.category_id);
+                return (t.description || '').toLowerCase().includes(search) ||
+                       (cat?.name || '').toLowerCase().includes(search);
+            });
+        }
+
+        // Date range filter
+        const dateFrom = document.getElementById('tx-filter-from')?.value;
+        const dateTo = document.getElementById('tx-filter-to')?.value;
+        if (dateFrom) filtered = filtered.filter(t => t.date >= dateFrom);
+        if (dateTo) filtered = filtered.filter(t => t.date <= dateTo);
+
         const container = document.getElementById('all-transactions');
         
         if (filtered.length === 0) {
@@ -2829,11 +3040,324 @@
         `).join('');
     }
 
+    function clearTxFilters() {
+        document.getElementById('tx-search').value = '';
+        document.getElementById('tx-filter-from').value = '';
+        document.getElementById('tx-filter-to').value = '';
+        renderTransactionsPage();
+    }
+
     function filterTransactions(el, filter) {
         currentTxFilter = filter;
         el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         el.classList.add('active');
         renderTransactionsPage();
+    }
+
+    // ========================
+    // TRANSACTION DETAIL
+    // ========================
+    let currentDetailTx = null;
+
+    function openTxDetail(txId) {
+        const t = transactions.find(tx => tx.id === txId);
+        if (!t) return;
+        currentDetailTx = t;
+
+        const cat = categories.find(c => c.id === t.category_id);
+        const acc = accounts.find(a => a.id === t.account_id);
+        const typeLabel = t.type === 'income' ? 'Ingreso' : t.type === 'expense' ? 'Gasto' : 'Transferencia';
+        const prefix = t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '';
+        const amountColor = t.type === 'income' ? 'var(--accent-success)' : t.type === 'expense' ? 'var(--accent-danger)' : 'var(--accent-primary)';
+
+        document.getElementById('txd-title').textContent = typeLabel;
+        document.getElementById('txd-icon').textContent = cat?.icon || (t.type === 'transfer' ? '🔄' : '📝');
+        document.getElementById('txd-amount').innerHTML = `<span style="color:${amountColor}">${prefix}${fmt(t.amount)}</span>`;
+        document.getElementById('txd-category').textContent = cat?.name || typeLabel;
+        document.getElementById('txd-desc').textContent = t.description || '—';
+        document.getElementById('txd-account').textContent = acc?.name || '—';
+        document.getElementById('txd-date').textContent = formatFullDateHN(t.date + 'T12:00:00');
+        document.getElementById('txd-time').textContent = t.time || formatTimeHN(t.created_at);
+
+        // Receipt photo
+        if (t.receipt_url) {
+            document.getElementById('txd-receipt').style.display = 'block';
+            document.getElementById('txd-receipt-img').src = t.receipt_url;
+            document.getElementById('txd-receipt-img').onclick = () => window.open(t.receipt_url, '_blank');
+        } else {
+            document.getElementById('txd-receipt').style.display = 'none';
+        }
+
+        document.getElementById('txd-view-mode').style.display = 'block';
+        document.getElementById('txd-edit-mode').style.display = 'none';
+        openModal('modal-tx-detail');
+    }
+
+    function editTransactionFromDetail() {
+        const t = currentDetailTx;
+        if (!t) return;
+
+        document.getElementById('txd-edit-id').value = t.id;
+        document.getElementById('txd-edit-type').value = t.type;
+        document.getElementById('txd-edit-old-amount').value = t.amount;
+        document.getElementById('txd-edit-old-account').value = t.account_id;
+        document.getElementById('txd-edit-amount').value = t.amount;
+        document.getElementById('txd-edit-desc').value = t.description || '';
+        document.getElementById('txd-edit-date').value = t.date;
+        document.getElementById('txd-edit-time').value = t.time || '';
+
+        // Populate categories
+        const catType = t.type === 'income' ? 'income' : 'expense';
+        const filtCats = categories.filter(c => c.type === catType);
+        document.getElementById('txd-edit-category').innerHTML = filtCats.map(c =>
+            `<option value="${c.id}" ${c.id === t.category_id ? 'selected' : ''}>${c.icon} ${c.name}</option>`
+        ).join('');
+        document.getElementById('txd-edit-cat-group').style.display = t.type === 'transfer' ? 'none' : 'block';
+
+        // Populate accounts
+        document.getElementById('txd-edit-account').innerHTML = accounts.map(a =>
+            `<option value="${a.id}" ${a.id === t.account_id ? 'selected' : ''}>${ACCOUNT_ICONS[a.type]} ${a.name}</option>`
+        ).join('');
+
+        document.getElementById('txd-view-mode').style.display = 'none';
+        document.getElementById('txd-edit-mode').style.display = 'block';
+    }
+
+    function cancelEditTransaction() {
+        document.getElementById('txd-view-mode').style.display = 'block';
+        document.getElementById('txd-edit-mode').style.display = 'none';
+    }
+
+    async function saveEditTransaction() {
+        const id = document.getElementById('txd-edit-id').value;
+        const type = document.getElementById('txd-edit-type').value;
+        const newAmount = parseFloat(document.getElementById('txd-edit-amount').value);
+        const oldAmount = parseFloat(document.getElementById('txd-edit-old-amount').value);
+        const oldAccountId = document.getElementById('txd-edit-old-account').value;
+        const newAccountId = document.getElementById('txd-edit-account').value;
+
+        if (!newAmount || newAmount <= 0) return showToast('Monto inválido', 'error');
+
+        const updateData = {
+            amount: newAmount,
+            description: document.getElementById('txd-edit-desc').value.trim(),
+            date: document.getElementById('txd-edit-date').value,
+            time: document.getElementById('txd-edit-time').value,
+            account_id: newAccountId,
+        };
+        if (type !== 'transfer') {
+            updateData.category_id = document.getElementById('txd-edit-category').value;
+        }
+
+        const { error } = await supabaseClient.from('transactions').update(updateData).eq('id', id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+
+        // Adjust account balances
+        const sign = type === 'income' ? 1 : -1;
+
+        if (oldAccountId === newAccountId) {
+            const diff = (newAmount - oldAmount) * sign;
+            const acc = accounts.find(a => a.id === newAccountId);
+            if (acc) await supabaseClient.from('accounts').update({ balance: parseFloat(acc.balance) + diff }).eq('id', newAccountId);
+        } else {
+            // Reverse old
+            const oldAcc = accounts.find(a => a.id === oldAccountId);
+            if (oldAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(oldAcc.balance) - (oldAmount * sign) }).eq('id', oldAccountId);
+            // Apply new
+            const newAcc = accounts.find(a => a.id === newAccountId);
+            if (newAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(newAcc.balance) + (newAmount * sign) }).eq('id', newAccountId);
+        }
+
+        closeModal('modal-tx-detail');
+        showToast('✅ Movimiento actualizado');
+        await loadAllData();
+    }
+
+    async function deleteTransaction() {
+        if (!currentDetailTx) return;
+        if (!confirm(`¿Eliminar este movimiento de ${fmt(currentDetailTx.amount)}?`)) return;
+
+        const t = currentDetailTx;
+        const { error } = await supabaseClient.from('transactions').delete().eq('id', t.id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+
+        // Reverse balance
+        const acc = accounts.find(a => a.id === t.account_id);
+        if (acc) {
+            const sign = t.type === 'income' ? -1 : t.type === 'expense' ? 1 : 0;
+            const newBal = parseFloat(acc.balance) + (parseFloat(t.amount) * sign);
+            await supabaseClient.from('accounts').update({ balance: newBal }).eq('id', t.account_id);
+        }
+
+        closeModal('modal-tx-detail');
+        showToast('🗑️ Movimiento eliminado');
+        await loadAllData();
+    }
+
+    // ========================
+    // EXPORT CSV
+    // ========================
+    function exportTransactions() {
+        const filtered = getFilteredTransactions();
+        if (filtered.length === 0) return showToast('No hay movimientos para exportar', 'error');
+
+        const rows = [['Fecha', 'Hora', 'Tipo', 'Categoría', 'Descripción', 'Monto', 'Cuenta']];
+        filtered.forEach(t => {
+            const cat = categories.find(c => c.id === t.category_id);
+            const acc = accounts.find(a => a.id === t.account_id);
+            rows.push([
+                t.date,
+                t.time || '',
+                t.type === 'income' ? 'Ingreso' : t.type === 'expense' ? 'Gasto' : 'Transferencia',
+                cat?.name || '',
+                t.description || '',
+                t.type === 'expense' ? -t.amount : t.amount,
+                acc?.name || ''
+            ]);
+        });
+
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mayordomia_${todayStr()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('📤 CSV exportado');
+    }
+
+    function getFilteredTransactions() {
+        let filtered = currentTxFilter === 'all' ? [...transactions] : transactions.filter(t => t.type === currentTxFilter);
+        const search = (document.getElementById('tx-search')?.value || '').toLowerCase().trim();
+        if (search) {
+            filtered = filtered.filter(t => {
+                const cat = categories.find(c => c.id === t.category_id);
+                return (t.description || '').toLowerCase().includes(search) || (cat?.name || '').toLowerCase().includes(search);
+            });
+        }
+        const dateFrom = document.getElementById('tx-filter-from')?.value;
+        const dateTo = document.getElementById('tx-filter-to')?.value;
+        if (dateFrom) filtered = filtered.filter(t => t.date >= dateFrom);
+        if (dateTo) filtered = filtered.filter(t => t.date <= dateTo);
+        return filtered;
+    }
+
+    // ========================
+    // RECURRING TRANSACTIONS
+    // ========================
+    let recurringTxs = [];
+
+    async function loadRecurring() {
+        try {
+            const { data, error } = await supabaseClient.from('recurring_transactions').select('*, categories(name, icon)')
+                .eq('user_id', currentUser.id).eq('is_active', true).order('day_of_month');
+            recurringTxs = error ? [] : (data || []);
+        } catch (e) {
+            recurringTxs = [];
+        }
+    }
+
+    function openRecurringModal() {
+        document.getElementById('rec-description').value = '';
+        document.getElementById('rec-amount').value = '';
+        document.getElementById('rec-day').value = '1';
+        const expCats = categories.filter(c => c.type === 'expense');
+        document.getElementById('rec-category').innerHTML = expCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+        const myAccs = accounts.filter(a => !['tithe', 'offering', 'firstfruits'].includes(a.type));
+        document.getElementById('rec-account').innerHTML = myAccs.map(a => `<option value="${a.id}">${ACCOUNT_ICONS[a.type]} ${a.name}</option>`).join('');
+        openModal('modal-recurring');
+    }
+
+    async function saveRecurring() {
+        const description = document.getElementById('rec-description').value.trim();
+        const amount = parseFloat(document.getElementById('rec-amount').value);
+        const category_id = document.getElementById('rec-category').value;
+        const account_id = document.getElementById('rec-account').value;
+        const day_of_month = parseInt(document.getElementById('rec-day').value);
+
+        if (!description) return showToast('Ingresa una descripción', 'error');
+        if (!amount || amount <= 0) return showToast('Monto inválido', 'error');
+        if (day_of_month < 1 || day_of_month > 28) return showToast('Día debe ser entre 1 y 28', 'error');
+
+        const { error } = await supabaseClient.from('recurring_transactions').insert({
+            user_id: currentUser.id,
+            description, amount, category_id, account_id, day_of_month,
+            type: 'expense', is_active: true
+        });
+        if (error) return showToast('Error: ' + error.message, 'error');
+
+        closeModal('modal-recurring');
+        showToast('🔄 Gasto recurrente creado');
+        await loadRecurring();
+        renderSettingsRecurring();
+    }
+
+    async function deleteRecurring(id) {
+        if (!confirm('¿Eliminar este gasto recurrente?')) return;
+        await supabaseClient.from('recurring_transactions').update({ is_active: false }).eq('id', id);
+        showToast('Eliminado');
+        await loadRecurring();
+        renderSettingsRecurring();
+    }
+
+    async function processRecurringTransactions() {
+        if (recurringTxs.length === 0) return;
+        try {
+            const today = hnNow();
+            const dayToday = today.getDate();
+            const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+            for (const rec of recurringTxs) {
+                if (rec.day_of_month !== dayToday) continue;
+
+                const { data: existing } = await supabaseClient.from('transactions')
+                    .select('id').eq('user_id', currentUser.id)
+                    .eq('description', `🔄 ${rec.description}`)
+                    .gte('date', `${monthKey}-01`)
+                    .lte('date', `${monthKey}-28`)
+                    .maybeSingle();
+
+                if (existing) continue;
+
+                await supabaseClient.from('transactions').insert({
+                    user_id: currentUser.id,
+                    account_id: rec.account_id,
+                    category_id: rec.category_id,
+                    type: 'expense',
+                    amount: rec.amount,
+                    description: `🔄 ${rec.description}`,
+                    date: todayStr(),
+                    time: nowTimeStr()
+                });
+
+                const acc = accounts.find(a => a.id === rec.account_id);
+                if (acc) {
+                    await supabaseClient.from('accounts').update({ balance: parseFloat(acc.balance) - rec.amount }).eq('id', rec.account_id);
+                }
+            }
+        } catch (e) {
+            console.warn('Recurring processing skipped:', e);
+        }
+    }
+
+    function renderSettingsRecurring() {
+        const container = document.getElementById('recurring-list');
+        if (!container) return;
+        if (recurringTxs.length === 0) {
+            container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);padding:8px 0;">No hay gastos recurrentes</p>';
+            return;
+        }
+        container.innerHTML = recurringTxs.map(r => `
+            <div class="settings-item">
+                <span>${r.categories?.icon || '📝'}</span>
+                <div style="flex:1;">
+                    <p style="font-size:14px;">${r.description}</p>
+                    <small style="color:var(--text-muted);">${fmt(r.amount)} · Día ${r.day_of_month}</small>
+                </div>
+                <button onclick="deleteRecurring('${r.id}')" style="background:none;border:none;color:var(--accent-danger);font-size:16px;cursor:pointer;">🗑️</button>
+            </div>
+        `).join('');
     }
 
     // ========================
@@ -3299,16 +3823,17 @@
 
     function renderReports() {
         const container = document.getElementById('reports-content');
-        const now = new Date();
+        const now = hnNow();
         let filteredTx;
 
         if (reportPeriod === 'week') {
             const weekAgo = new Date(now);
             weekAgo.setDate(weekAgo.getDate() - 7);
-            filteredTx = transactions.filter(t => new Date(t.date) >= weekAgo);
+            const weekStr = weekAgo.toISOString().split('T')[0];
+            filteredTx = transactions.filter(t => t.date >= weekStr);
         } else if (reportPeriod === 'year') {
-            const yearStart = new Date(now.getFullYear(), 0, 1);
-            filteredTx = transactions.filter(t => new Date(t.date) >= yearStart);
+            const yearStart = `${now.getFullYear()}-01-01`;
+            filteredTx = transactions.filter(t => t.date >= yearStart);
         } else {
             const { start, end } = getMonthRange();
             filteredTx = transactions.filter(t => t.date >= start && t.date <= end);
@@ -3317,6 +3842,7 @@
         const income = filteredTx.filter(t => t.type === 'income').reduce((s, t) => s + parseFloat(t.amount), 0);
         const expenses = filteredTx.filter(t => t.type === 'expense').reduce((s, t) => s + parseFloat(t.amount), 0);
         const net = income - expenses;
+        const savingsRate = income > 0 ? ((income - expenses) / income * 100).toFixed(1) : 0;
 
         // Expense by category
         const expByCategory = {};
@@ -3324,14 +3850,15 @@
             const cat = categories.find(c => c.id === t.category_id);
             const name = cat?.name || 'Otro';
             const icon = cat?.icon || '📝';
-            if (!expByCategory[name]) expByCategory[name] = { amount: 0, icon };
+            if (!expByCategory[name]) expByCategory[name] = { amount: 0, icon, count: 0 };
             expByCategory[name].amount += parseFloat(t.amount);
+            expByCategory[name].count++;
         });
 
         const sortedCats = Object.entries(expByCategory).sort((a, b) => b[1].amount - a[1].amount);
         const colors = ['#22d3ee', '#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc', '#fb923c', '#a78bfa', '#38bdf8', '#4ade80'];
 
-        // Build donut chart with SVG
+        // Donut chart SVG
         let donutSVG = '';
         if (sortedCats.length > 0) {
             let cumulative = 0;
@@ -3341,7 +3868,6 @@
                 cumulative += pct;
                 return { name, pct, offset, color: colors[i % colors.length], amount: data.amount, icon: data.icon };
             });
-
             donutSVG = `
                 <div class="donut-chart">
                     <svg viewBox="0 0 42 42" style="width:100%;height:100%;transform:rotate(-90deg);">
@@ -3358,40 +3884,109 @@
             `;
         }
 
+        // Monthly bar chart (last 6 months)
+        let barChartHTML = '';
+        if (reportPeriod !== 'week') {
+            const months = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+                const mEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+                const mLabel = d.toLocaleDateString('es-HN', { month: 'short' });
+                const mInc = transactions.filter(t => t.type === 'income' && t.date >= mStart && t.date <= mEnd).reduce((s, t) => s + parseFloat(t.amount), 0);
+                const mExp = transactions.filter(t => t.type === 'expense' && t.date >= mStart && t.date <= mEnd).reduce((s, t) => s + parseFloat(t.amount), 0);
+                months.push({ label: mLabel, income: mInc, expense: mExp });
+            }
+            const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense)), 1);
+
+            barChartHTML = `
+                <div class="chart-container">
+                    <h4 style="font-size:14px;margin-bottom:16px;">📊 Ingresos vs Gastos (6 meses)</h4>
+                    <div style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:24px;position:relative;">
+                        ${months.map(m => `
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end;">
+                                <div style="width:45%;background:var(--accent-success);border-radius:4px 4px 0 0;min-height:2px;height:${(m.income / maxVal) * 100}%;opacity:0.8;" title="Ingreso: ${fmt(m.income)}"></div>
+                                <div style="width:45%;background:var(--accent-danger);border-radius:4px 4px 0 0;min-height:2px;height:${(m.expense / maxVal) * 100}%;opacity:0.8;margin-top:-${(m.income / maxVal) * 100}%;margin-left:55%;" title="Gasto: ${fmt(m.expense)}"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        ${months.map(m => `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-muted);">${m.label}</div>`).join('')}
+                    </div>
+                    <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+                        <span style="font-size:11px;color:var(--text-muted);">🟢 Ingresos</span>
+                        <span style="font-size:11px;color:var(--text-muted);">🔴 Gastos</span>
+                    </div>
+                </div>
+            `;
+        }
+
         const periodLabel = reportPeriod === 'week' ? 'esta semana' : reportPeriod === 'year' ? 'este año' : 'este mes';
+        const topCat = sortedCats[0];
+        const topCatPct = topCat && expenses > 0 ? Math.round((topCat[1].amount / expenses) * 100) : 0;
 
         container.innerHTML = `
             <div class="chart-container">
-                <h4 style="font-size:14px; margin-bottom:16px;">Resumen ${periodLabel}</h4>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px;">
+                <h4 style="font-size:14px;margin-bottom:16px;">Resumen ${periodLabel}</h4>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
                     <div style="text-align:center;">
-                        <p style="font-size:11px; color:var(--text-muted);">Ingresos</p>
-                        <p style="font-family:var(--font-mono); font-weight:700; color:var(--accent-success);">${fmt(income)}</p>
+                        <p style="font-size:11px;color:var(--text-muted);">Ingresos</p>
+                        <p style="font-family:var(--font-mono);font-weight:700;color:var(--accent-success);font-size:14px;">${fmt(income)}</p>
                     </div>
                     <div style="text-align:center;">
-                        <p style="font-size:11px; color:var(--text-muted);">Gastos</p>
-                        <p style="font-family:var(--font-mono); font-weight:700; color:var(--accent-danger);">${fmt(expenses)}</p>
+                        <p style="font-size:11px;color:var(--text-muted);">Gastos</p>
+                        <p style="font-family:var(--font-mono);font-weight:700;color:var(--accent-danger);font-size:14px;">${fmt(expenses)}</p>
                     </div>
                     <div style="text-align:center;">
-                        <p style="font-size:11px; color:var(--text-muted);">Neto</p>
-                        <p style="font-family:var(--font-mono); font-weight:700; color:${net >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)'};">${fmt(net)}</p>
+                        <p style="font-size:11px;color:var(--text-muted);">Neto</p>
+                        <p style="font-family:var(--font-mono);font-weight:700;color:${net >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)'};font-size:14px;">${fmt(net)}</p>
                     </div>
+                </div>
+                ${income > 0 ? `
+                    <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+                        <span style="font-size:13px;color:var(--text-muted);">Tasa de ahorro: </span>
+                        <strong style="color:${parseFloat(savingsRate) >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)'};">${savingsRate}%</strong>
+                    </div>
+                ` : ''}
+            </div>
+
+            ${barChartHTML}
+
+            ${topCat ? `
+                <div class="chart-container" style="border-left:3px solid ${colors[0]};">
+                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Mayor gasto</p>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:28px;">${topCat[1].icon}</span>
+                        <div>
+                            <p style="font-weight:700;font-size:15px;">${topCat[0]}</p>
+                            <p style="font-family:var(--font-mono);color:var(--accent-danger);font-size:14px;">${fmt(topCat[1].amount)} <span style="font-size:11px;color:var(--text-muted);">(${topCatPct}%)</span></p>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="chart-container">
+                <h4 style="font-size:14px;margin-bottom:16px;">Gastos por Categoría</h4>
+                ${expenses > 0 ? donutSVG : '<div class="empty-state"><p>Sin gastos en este período</p></div>'}
+                <div style="margin-top:12px;">
+                    ${sortedCats.map(([name, data], i) => {
+                        const pct = expenses > 0 ? Math.round((data.amount / expenses) * 100) : 0;
+                        return `
+                            <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                                <div style="width:12px;height:12px;border-radius:3px;background:${colors[i % colors.length]};flex-shrink:0;"></div>
+                                <span style="font-size:16px;">${data.icon}</span>
+                                <span style="flex:1;font-size:13px;">${name}</span>
+                                <span style="font-size:11px;color:var(--text-muted);margin-right:4px;">${pct}%</span>
+                                <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;">${fmt(data.amount)}</span>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
 
-            <div class="chart-container">
-                <h4 style="font-size:14px; margin-bottom:16px;">Gastos por Categoría</h4>
-                ${expenses > 0 ? donutSVG : '<div class="empty-state"><p>Sin gastos en este período</p></div>'}
-                <div style="margin-top:12px;">
-                    ${sortedCats.map(([name, data], i) => `
-                        <div class="legend-item">
-                            <div class="legend-color" style="background:${colors[i % colors.length]}"></div>
-                            <span class="legend-label">${data.icon} ${name}</span>
-                            <span class="legend-value">${fmt(data.amount)}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
+            <button class="btn btn-secondary" style="margin-top:12px;" onclick="navigateTo('transactions')">
+                📤 Exportar Movimientos
+            </button>
         `;
     }
 
@@ -3679,6 +4274,7 @@
         document.getElementById('settings-tithe').textContent = userProfile.tithe_percentage;
         document.getElementById('settings-spiritual-options').style.display = userProfile.spiritual_module_enabled ? 'block' : 'none';
         renderFamilySettings();
+        renderSettingsRecurring();
     }
 
     async function toggleSpiritual(enabled) {
