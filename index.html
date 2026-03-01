@@ -3129,48 +3129,52 @@
     }
 
     async function saveEditTransaction() {
-        const id = document.getElementById('txd-edit-id').value;
-        const type = document.getElementById('txd-edit-type').value;
-        const newAmount = parseFloat(document.getElementById('txd-edit-amount').value);
-        const oldAmount = parseFloat(document.getElementById('txd-edit-old-amount').value);
-        const oldAccountId = document.getElementById('txd-edit-old-account').value;
-        const newAccountId = document.getElementById('txd-edit-account').value;
+        try {
+            const id = document.getElementById('txd-edit-id').value;
+            const type = document.getElementById('txd-edit-type').value;
+            const newAmount = parseFloat(document.getElementById('txd-edit-amount').value);
+            const oldAmount = parseFloat(document.getElementById('txd-edit-old-amount').value);
+            const oldAccountId = document.getElementById('txd-edit-old-account').value;
+            const newAccountId = document.getElementById('txd-edit-account').value;
 
-        if (!newAmount || newAmount <= 0) return showToast('Monto inválido', 'error');
+            if (!newAmount || newAmount <= 0) return showToast('Monto inválido', 'error');
+            if (!id) return showToast('Error: transacción no identificada', 'error');
 
-        const updateData = {
-            amount: newAmount,
-            description: document.getElementById('txd-edit-desc').value.trim(),
-            date: document.getElementById('txd-edit-date').value,
-            time: document.getElementById('txd-edit-time').value,
-            account_id: newAccountId,
-        };
-        if (type !== 'transfer') {
-            updateData.category_id = document.getElementById('txd-edit-category').value;
+            const updateData = {
+                amount: newAmount,
+                description: document.getElementById('txd-edit-desc').value.trim(),
+                date: document.getElementById('txd-edit-date').value,
+                time: document.getElementById('txd-edit-time').value,
+                account_id: newAccountId,
+            };
+            if (type !== 'transfer') {
+                updateData.category_id = document.getElementById('txd-edit-category').value;
+            }
+
+            const { error } = await supabaseClient.from('transactions').update(updateData).eq('id', id);
+            if (error) return showToast('Error al guardar: ' + error.message, 'error');
+
+            // Adjust account balances
+            const sign = type === 'income' ? 1 : -1;
+
+            if (oldAccountId === newAccountId) {
+                const diff = (newAmount - oldAmount) * sign;
+                const acc = accounts.find(a => a.id === newAccountId);
+                if (acc) await supabaseClient.from('accounts').update({ balance: parseFloat(acc.balance) + diff }).eq('id', newAccountId);
+            } else {
+                const oldAcc = accounts.find(a => a.id === oldAccountId);
+                if (oldAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(oldAcc.balance) - (oldAmount * sign) }).eq('id', oldAccountId);
+                const newAcc = accounts.find(a => a.id === newAccountId);
+                if (newAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(newAcc.balance) + (newAmount * sign) }).eq('id', newAccountId);
+            }
+
+            closeModal('modal-tx-detail');
+            showToast('✅ Movimiento actualizado');
+            await loadAllData();
+        } catch (err) {
+            console.error('Edit tx error:', err);
+            showToast('Error: ' + err.message, 'error');
         }
-
-        const { error } = await supabaseClient.from('transactions').update(updateData).eq('id', id);
-        if (error) return showToast('Error: ' + error.message, 'error');
-
-        // Adjust account balances
-        const sign = type === 'income' ? 1 : -1;
-
-        if (oldAccountId === newAccountId) {
-            const diff = (newAmount - oldAmount) * sign;
-            const acc = accounts.find(a => a.id === newAccountId);
-            if (acc) await supabaseClient.from('accounts').update({ balance: parseFloat(acc.balance) + diff }).eq('id', newAccountId);
-        } else {
-            // Reverse old
-            const oldAcc = accounts.find(a => a.id === oldAccountId);
-            if (oldAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(oldAcc.balance) - (oldAmount * sign) }).eq('id', oldAccountId);
-            // Apply new
-            const newAcc = accounts.find(a => a.id === newAccountId);
-            if (newAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(newAcc.balance) + (newAmount * sign) }).eq('id', newAccountId);
-        }
-
-        closeModal('modal-tx-detail');
-        showToast('✅ Movimiento actualizado');
-        await loadAllData();
     }
 
     async function deleteTransaction() {
@@ -4007,10 +4011,22 @@
                 familyData = memberData.families;
                 familyData.myRole = memberData.role;
 
-                const { data: members } = await supabaseClient.from('family_members')
-                    .select('*, users(id, full_name, email, currency)')
-                    .eq('family_id', familyData.id);
-                familyMembers = members || [];
+                // Use RPC to get members with names (bypasses users RLS)
+                const { data: membersJson, error } = await supabaseClient.rpc('get_family_members');
+                if (!error && membersJson) {
+                    familyMembers = membersJson.map(m => ({
+                        ...m,
+                        users: { id: m.user_id, full_name: m.full_name, email: m.email, currency: m.currency }
+                    }));
+                } else {
+                    // Fallback: at least load own data
+                    familyMembers = [{
+                        user_id: currentUser.id,
+                        role: memberData.role,
+                        family_id: familyData.id,
+                        users: { id: currentUser.id, full_name: userProfile?.full_name, email: userProfile?.email, currency: userProfile?.currency }
+                    }];
+                }
             } else {
                 familyData = null;
                 familyMembers = [];
