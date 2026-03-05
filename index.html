@@ -372,6 +372,10 @@
             margin-top: 2px;
         }
 
+        .cat-option:active, .cat-option:hover {
+            background: var(--bg-input);
+        }
+
         .transaction-amount {
             font-family: var(--font-mono);
             font-size: 15px;
@@ -1749,7 +1753,9 @@
 
                 <div class="form-group" id="tx-category-group">
                     <label class="form-label">Categoría</label>
-                    <select class="form-select" id="tx-category"></select>
+                    <input type="text" class="form-input" id="tx-category-search" placeholder="🔍 Buscar categoría..." oninput="filterCategoryOptions()" onfocus="showCategoryDropdown()" autocomplete="off">
+                    <input type="hidden" id="tx-category">
+                    <div id="tx-category-dropdown" style="display:none;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);margin-top:4px;"></div>
                 </div>
 
                 <div class="form-group">
@@ -2594,9 +2600,48 @@
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'flex';
             await loadAllData();
+            setupRealtime();
         } else {
             showOnboarding();
         }
+    }
+
+    // ========================
+    // REALTIME SUBSCRIPTIONS
+    // ========================
+    let realtimeChannel = null;
+
+    function setupRealtime() {
+        if (realtimeChannel) {
+            supabaseClient.removeChannel(realtimeChannel);
+        }
+
+        realtimeChannel = supabaseClient.channel('db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${currentUser.id}` }, () => {
+                loadTransactions().then(() => { renderCurrentPage(); });
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts', filter: `user_id=eq.${currentUser.id}` }, () => {
+                loadAccounts().then(() => { renderCurrentPage(); });
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${currentUser.id}` }, () => {
+                loadCategories().then(() => { renderCurrentPage(); });
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'family_members' }, () => {
+                loadFamilyData().then(() => { renderCurrentPage(); });
+            })
+            .subscribe((status) => {
+                console.log('Realtime:', status);
+            });
+    }
+
+    function renderCurrentPage() {
+        const page = currentPage;
+        if (page === 'dashboard') renderDashboard();
+        else if (page === 'accounts') renderAccountsPage();
+        else if (page === 'transactions') renderTransactionsPage();
+        else if (page === 'budgets') renderBudgetsPage();
+        else if (page === 'reports') renderReports();
+        else if (page === 'family') renderFamilyPage();
     }
 
     // ========================
@@ -2701,8 +2746,14 @@
 
     async function loadAccounts() {
         const { data } = await supabaseClient.from('accounts').select('*')
-            .eq('user_id', currentUser.id).eq('is_active', true).order('created_at');
+            .eq('user_id', currentUser.id).eq('is_active', true);
         accounts = data || [];
+        // Sort: cash first, then by balance descending
+        accounts.sort((a, b) => {
+            if (a.type === 'cash' && b.type !== 'cash') return -1;
+            if (b.type === 'cash' && a.type !== 'cash') return 1;
+            return parseFloat(b.balance || 0) - parseFloat(a.balance || 0);
+        });
     }
 
     async function loadCategories() {
@@ -2712,10 +2763,9 @@
     }
 
     async function loadTransactions() {
-        const { data } = await supabaseClient.from('transactions').select('*, categories(name, icon)')
+        const { data } = await supabaseClient.from('transactions').select('*, categories(name, icon), accounts(name, type)')
             .eq('user_id', currentUser.id).order('date', { ascending: false }).order('time', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(200);
         transactions = data || [];
-        // Extra sort in JS for reliable date+time ordering
         transactions.sort((a, b) => {
             const dateA = a.date + (a.time || '23:59');
             const dateB = b.date + (b.time || '23:59');
@@ -2761,7 +2811,7 @@
         else if (page === 'debts') renderDebtsPage();
         else if (page === 'budgets') renderBudgetsPage();
         else if (page === 'reports') renderReports();
-        else if (page === 'family') renderFamilyPage();
+        else if (page === 'family') { loadFamilyData().then(() => renderFamilyPage()); }
     }
 
     // ========================
@@ -2890,13 +2940,17 @@
         const dateDisplay = formatDateHN(t.date, t.time);
         const timeDisplay = t.time ? t.time : formatTimeHN(t.created_at);
         const photoIcon = t.receipt_url ? ' 📎' : '';
+
+        // Account name
+        const accName = t.accounts?.name || accounts.find(a => a.id === t.account_id)?.name || '';
+        const accDisplay = accName ? ` · ${accName}` : '';
         
         return `
             <div class="transaction-item" onclick="openTxDetail('${t.id}')" style="cursor:pointer;">
                 <div class="transaction-icon" style="background: ${bgColor}">${icon}</div>
                 <div class="transaction-info">
                     <div class="transaction-name">${t.description || catName}${photoIcon}</div>
-                    <div class="transaction-category">${catName} · ${dateDisplay} · ${timeDisplay}</div>
+                    <div class="transaction-category">${catName}${accDisplay} · ${dateDisplay} · ${timeDisplay}</div>
                 </div>
                 <div class="transaction-amount ${amountClass}">${prefix}${fmt(t.amount)}</div>
             </div>
@@ -3119,9 +3173,9 @@
         document.getElementById('txd-edit-date').value = t.date;
         document.getElementById('txd-edit-time').value = t.time || '';
 
-        // Populate categories
+        // Populate categories (sorted alphabetically)
         const catType = t.type === 'income' ? 'income' : 'expense';
-        const filtCats = categories.filter(c => c.type === catType);
+        const filtCats = categories.filter(c => c.type === catType).sort((a, b) => a.name.localeCompare(b.name));
         document.getElementById('txd-edit-category').innerHTML = filtCats.map(c =>
             `<option value="${c.id}" ${c.id === t.category_id ? 'selected' : ''}>${c.icon} ${c.name}</option>`
         ).join('');
@@ -3417,16 +3471,22 @@
         const spiritualPreview = document.getElementById('tx-spiritual-preview');
         const accLabel = document.getElementById('tx-account-label');
 
-        // Categories
-        const filteredCats = categories.filter(c => c.type === (currentTxType === 'income' ? 'income' : 'expense'));
-        document.getElementById('tx-category').innerHTML = filteredCats.map(c => 
-            `<option value="${c.id}">${c.icon} ${c.name}</option>`
-        ).join('');
+        // Categories - reset search
+        document.getElementById('tx-category-search').value = '';
+        document.getElementById('tx-category').value = '';
+        filterCategoryOptions();
 
-        // Accounts
-        const accOptions = accounts.map(a => `<option value="${a.id}">${ACCOUNT_ICONS[a.type]} ${a.name} (${fmt(a.balance)})</option>`).join('');
+        // Accounts - cash first, sorted by balance
+        const sortedAccs = [...accounts];
+        const accOptions = sortedAccs.map(a => `<option value="${a.id}">${ACCOUNT_ICONS[a.type]} ${a.name} (${fmt(a.balance)})</option>`).join('');
         document.getElementById('tx-account').innerHTML = accOptions;
         document.getElementById('tx-to-account').innerHTML = accOptions;
+
+        // Default to cash account
+        const cashAcc = accounts.find(a => a.type === 'cash');
+        if (cashAcc) {
+            document.getElementById('tx-account').value = cashAcc.id;
+        }
 
         if (currentTxType === 'transfer') {
             catGroup.style.display = 'none';
@@ -3447,6 +3507,53 @@
         }
     }
 
+    // Searchable category dropdown
+    function filterCategoryOptions() {
+        const search = (document.getElementById('tx-category-search').value || '').toLowerCase().trim();
+        const catType = currentTxType === 'income' ? 'income' : 'expense';
+        let filteredCats = categories.filter(c => c.type === catType);
+        
+        // Sort alphabetically
+        filteredCats.sort((a, b) => a.name.localeCompare(b.name));
+        
+        if (search) {
+            filteredCats = filteredCats.filter(c => c.name.toLowerCase().includes(search));
+        }
+
+        const dropdown = document.getElementById('tx-category-dropdown');
+        if (filteredCats.length === 0) {
+            dropdown.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:13px;">Sin resultados</div>';
+        } else {
+            dropdown.innerHTML = filteredCats.map(c => `
+                <div onclick="selectCategory('${c.id}','${c.icon} ${c.name}')" 
+                    style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border-color);font-size:14px;"
+                    class="cat-option">
+                    <span style="font-size:18px;">${c.icon}</span>
+                    <span>${c.name}</span>
+                </div>
+            `).join('');
+        }
+        dropdown.style.display = 'block';
+    }
+
+    function showCategoryDropdown() {
+        filterCategoryOptions();
+    }
+
+    function selectCategory(id, label) {
+        document.getElementById('tx-category').value = id;
+        document.getElementById('tx-category-search').value = label;
+        document.getElementById('tx-category-dropdown').style.display = 'none';
+    }
+
+    // Close category dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#tx-category-group')) {
+            const dd = document.getElementById('tx-category-dropdown');
+            if (dd) dd.style.display = 'none';
+        }
+    });
+
     // Update spiritual preview when amount changes
     document.getElementById('tx-amount').addEventListener('input', function() {
         if (currentTxType === 'income' && userProfile?.spiritual_module_enabled) {
@@ -3458,6 +3565,9 @@
     });
 
     async function saveTransaction() {
+        const saveBtn = document.getElementById('btn-save-tx');
+        if (saveBtn.disabled) return; // Prevent double-tap
+
         try {
             const amount = parseFloat(document.getElementById('tx-amount').value);
             if (!amount || amount <= 0) return showToast('Ingresa un monto válido', 'error');
@@ -3471,7 +3581,7 @@
             if (!accountId) return showToast('Selecciona una cuenta', 'error');
 
             // Show loading state
-            document.getElementById('btn-save-tx').disabled = true;
+            saveBtn.disabled = true;
             document.getElementById('tx-saving-indicator').style.display = 'block';
             document.getElementById('tx-buttons').style.display = 'none';
 
@@ -3483,45 +3593,36 @@
 
             if (currentTxType === 'transfer') {
                 const toAccountId = document.getElementById('tx-to-account').value;
-                if (!toAccountId) return resetSaveBtn('Selecciona cuenta destino');
-                if (accountId === toAccountId) return resetSaveBtn('Selecciona cuentas diferentes');
+                if (!toAccountId) { resetSaveBtn('Selecciona cuenta destino'); return; }
+                if (accountId === toAccountId) { resetSaveBtn('Selecciona cuentas diferentes'); return; }
 
                 const { error } = await supabaseClient.from('transactions').insert([
                     { user_id: currentUser.id, account_id: accountId, type: 'transfer', amount: amount, description: description || 'Transferencia enviada', date, time, receipt_url: receiptUrl },
                     { user_id: currentUser.id, account_id: toAccountId, type: 'transfer', amount: amount, description: description || 'Transferencia recibida', date, time, receipt_url: receiptUrl }
                 ]);
-                if (error) return resetSaveBtn('Error: ' + error.message);
+                if (error) { resetSaveBtn('Error: ' + error.message); return; }
 
-                // Update balances using RPC or direct update
                 const fromAcc = accounts.find(a => a.id === accountId);
                 const toAcc = accounts.find(a => a.id === toAccountId);
-                if (fromAcc) {
-                    await supabaseClient.from('accounts').update({ balance: parseFloat(fromAcc.balance) - amount }).eq('id', accountId);
-                }
-                if (toAcc) {
-                    await supabaseClient.from('accounts').update({ balance: parseFloat(toAcc.balance) + amount }).eq('id', toAccountId);
-                }
+                if (fromAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(fromAcc.balance) - amount }).eq('id', accountId);
+                if (toAcc) await supabaseClient.from('accounts').update({ balance: parseFloat(toAcc.balance) + amount }).eq('id', toAccountId);
 
             } else {
                 const categoryId = document.getElementById('tx-category').value;
-                if (!categoryId && currentTxType !== 'transfer') return resetSaveBtn('Selecciona una categoría');
+                if (!categoryId) { resetSaveBtn('Selecciona una categoría'); return; }
 
                 const txData = {
                     user_id: currentUser.id,
                     account_id: accountId,
-                    category_id: categoryId || null,
+                    category_id: categoryId,
                     type: currentTxType,
-                    amount,
-                    description,
-                    date,
-                    time,
+                    amount, description, date, time,
                     receipt_url: receiptUrl
                 };
 
                 const { error } = await supabaseClient.from('transactions').insert(txData);
-                if (error) return resetSaveBtn('Error: ' + error.message);
+                if (error) { resetSaveBtn('Error: ' + error.message); return; }
 
-                // Update account balance
                 const acc = accounts.find(a => a.id === accountId);
                 if (acc) {
                     const newBalance = currentTxType === 'income'
@@ -3530,33 +3631,30 @@
                     await supabaseClient.from('accounts').update({ balance: newBalance }).eq('id', accountId);
                 }
 
-                // Spiritual allocation
                 if (currentTxType === 'income' && userProfile?.spiritual_module_enabled) {
                     const titheAmount = amount * (userProfile.tithe_percentage / 100);
                     const titheAccount = accounts.find(a => a.type === 'tithe');
                     if (titheAccount) {
                         try {
                             await supabaseClient.from('spiritual_allocations').insert({
-                                user_id: currentUser.id,
-                                type: 'tithe',
-                                amount: titheAmount,
-                                target_account_id: titheAccount.id,
-                                status: 'suggested'
+                                user_id: currentUser.id, type: 'tithe', amount: titheAmount,
+                                target_account_id: titheAccount.id, status: 'suggested'
                             });
-                        } catch (e) {
-                            console.warn('Spiritual allocation note saved:', e);
-                        }
+                        } catch (e) { /* non-critical */ }
                     }
                 }
             }
 
             closeModal('modal-transaction');
             currentPhotoFile = null;
-            showToast(currentTxType === 'income' ? 'Ingreso registrado' : currentTxType === 'expense' ? 'Gasto registrado' : 'Transferencia realizada');
+            showToast(currentTxType === 'income' ? '💵 Ingreso registrado' : currentTxType === 'expense' ? '🛒 Gasto registrado' : '🔄 Transferencia realizada');
             await loadAllData();
         } catch (err) {
             console.error('saveTransaction error:', err);
-            resetSaveBtn('Error inesperado: ' + err.message);
+            showToast('Error: ' + err.message, 'error');
+        } finally {
+            // ALWAYS reset the button no matter what happens
+            resetSaveBtn();
         }
     }
 
@@ -4013,41 +4111,51 @@
     let familyData = null;
     let familyMembers = [];
 
-    async function loadFamilyData() {
-        try {
-            const { data: memberData } = await supabaseClient.from('family_members')
-                .select('*, families(*)')
-                .eq('user_id', currentUser.id)
-                .maybeSingle();
+    async function loadFamilyData(retries = 2) {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const { data: memberData, error: memErr } = await supabaseClient.from('family_members')
+                    .select('*, families(*)')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
 
-            if (memberData && memberData.families) {
-                familyData = memberData.families;
-                familyData.myRole = memberData.role;
-
-                // Use RPC to get members with names (bypasses users RLS)
-                const { data: membersJson, error } = await supabaseClient.rpc('get_family_members');
-                if (!error && membersJson) {
-                    familyMembers = membersJson.map(m => ({
-                        ...m,
-                        users: { id: m.user_id, full_name: m.full_name, email: m.email, currency: m.currency }
-                    }));
-                } else {
-                    // Fallback: at least load own data
-                    familyMembers = [{
-                        user_id: currentUser.id,
-                        role: memberData.role,
-                        family_id: familyData.id,
-                        users: { id: currentUser.id, full_name: userProfile?.full_name, email: userProfile?.email, currency: userProfile?.currency }
-                    }];
+                if (memErr) {
+                    console.warn('Family members query error:', memErr.message);
+                    if (attempt < retries) { await new Promise(r => setTimeout(r, 500)); continue; }
+                    familyData = null; familyMembers = []; return;
                 }
-            } else {
+
+                if (memberData && memberData.families) {
+                    familyData = memberData.families;
+                    familyData.myRole = memberData.role;
+
+                    // Use RPC to get members with names (bypasses users RLS)
+                    const { data: membersJson, error } = await supabaseClient.rpc('get_family_members');
+                    if (!error && membersJson && Array.isArray(membersJson)) {
+                        familyMembers = membersJson.map(m => ({
+                            ...m,
+                            users: { id: m.user_id, full_name: m.full_name, email: m.email, currency: m.currency }
+                        }));
+                    } else {
+                        familyMembers = [{
+                            user_id: currentUser.id,
+                            role: memberData.role,
+                            family_id: familyData.id,
+                            users: { id: currentUser.id, full_name: userProfile?.full_name, email: userProfile?.email, currency: userProfile?.currency }
+                        }];
+                    }
+                    return; // Success
+                } else {
+                    familyData = null;
+                    familyMembers = [];
+                    return;
+                }
+            } catch (e) {
+                console.warn(`Family load attempt ${attempt + 1} failed:`, e);
+                if (attempt < retries) { await new Promise(r => setTimeout(r, 500)); continue; }
                 familyData = null;
                 familyMembers = [];
             }
-        } catch (e) {
-            console.warn('Family load skipped:', e);
-            familyData = null;
-            familyMembers = [];
         }
     }
 
@@ -4319,8 +4427,8 @@
     }
 
     function renderCategoriesModal() {
-        const incomeCats = categories.filter(c => c.type === 'income');
-        const expenseCats = categories.filter(c => c.type === 'expense');
+        const incomeCats = categories.filter(c => c.type === 'income').sort((a, b) => a.name.localeCompare(b.name));
+        const expenseCats = categories.filter(c => c.type === 'expense').sort((a, b) => a.name.localeCompare(b.name));
 
         document.getElementById('categories-list').innerHTML = `
             <h4 style="font-size:14px;color:var(--accent-success);margin-bottom:10px;">💵 Ingresos</h4>
