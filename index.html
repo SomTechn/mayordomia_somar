@@ -1452,6 +1452,19 @@
                         </div>
                     </div>
 
+                    <div style="display:flex;gap:10px;margin-bottom:16px;">
+                        <div onclick="navigateTo('advisor')" style="flex:2;background:linear-gradient(135deg,rgba(34,211,238,0.1),rgba(168,85,247,0.08));border:1px solid rgba(34,211,238,0.15);border-radius:var(--radius-sm);padding:12px;cursor:pointer;">
+                            <div style="font-size:11px;color:var(--text-muted);">Presupuesto hoy</div>
+                            <div id="dash-daily-budget" style="font-family:var(--font-mono);font-size:20px;font-weight:700;">L 0</div>
+                        </div>
+                        <div onclick="navigateTo('advisor')" style="flex:1;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;text-align:center;cursor:pointer;">
+                            <div id="dash-streak-icon" style="font-size:20px;">🔥</div>
+                            <div id="dash-streak" style="font-family:var(--font-mono);font-size:16px;font-weight:700;">0</div>
+                            <div style="font-size:10px;color:var(--text-muted);">racha</div>
+                        </div>
+                    </div>
+                    <div id="dash-payment-alert" style="display:none;margin-bottom:16px;"></div>
+
                     <div class="section-title">
                         <span>Mis Cuentas</span>
                         <small onclick="openAccountModal()">+ Agregar</small>
@@ -1575,6 +1588,94 @@
                         <small onclick="openBudgetModal()">+ Nuevo</small>
                     </div>
                     <div id="budgets-list"></div>
+                </div>
+
+                <!-- === ADVISOR PAGE === -->
+                <div id="page-advisor" class="page">
+                    <!-- Daily Budget Hero -->
+                    <div class="card" style="text-align:center;padding:20px 16px;margin-bottom:16px;background:linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.08));border:1px solid rgba(34,211,238,0.15);">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Presupuesto disponible hoy</div>
+                        <div id="adv-daily-budget" style="font-size:36px;font-weight:800;font-family:var(--font-mono);letter-spacing:-2px;">L 0</div>
+                        <div id="adv-daily-context" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
+                        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+                            <div style="text-align:center;flex:1;">
+                                <div style="font-size:11px;color:var(--text-muted);">Gastado hoy</div>
+                                <div id="adv-spent-today" style="font-family:var(--font-mono);font-weight:600;color:var(--accent-danger);font-size:14px;">L 0</div>
+                            </div>
+                            <div style="text-align:center;flex:1;">
+                                <div style="font-size:11px;color:var(--text-muted);">Días p/cobro</div>
+                                <div id="adv-days-to-pay" style="font-family:var(--font-mono);font-weight:600;color:var(--accent-primary);font-size:14px;">--</div>
+                            </div>
+                            <div style="text-align:center;flex:1;">
+                                <div style="font-size:11px;color:var(--text-muted);">Disponible</div>
+                                <div id="adv-available" style="font-family:var(--font-mono);font-weight:600;color:var(--accent-success);font-size:14px;">L 0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Streak & Score Row -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                        <div class="card" style="text-align:center;padding:16px 10px;">
+                            <div id="adv-streak-emoji" style="font-size:28px;">🔥</div>
+                            <div id="adv-streak" style="font-size:24px;font-weight:800;font-family:var(--font-mono);">0</div>
+                            <div style="font-size:11px;color:var(--text-muted);">días de racha</div>
+                            <div id="adv-level" style="font-size:11px;margin-top:4px;color:var(--accent-primary);font-weight:600;">Nivel 1</div>
+                        </div>
+                        <div class="card" style="text-align:center;padding:16px 10px;cursor:pointer;" onclick="document.getElementById('advisor-breakdown').scrollIntoView({behavior:'smooth'})">
+                            <div id="advisor-score-emoji" style="font-size:28px;">📊</div>
+                            <div id="advisor-score" style="font-size:24px;font-weight:800;font-family:var(--font-mono);">--</div>
+                            <div style="font-size:11px;color:var(--text-muted);">salud financiera</div>
+                            <div id="advisor-score-label" style="font-size:11px;margin-top:4px;font-weight:600;">Calculando...</div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Payments -->
+                    <div class="section-title">
+                        <span>📅 Próximos Pagos</span>
+                        <small onclick="openScheduledPaymentModal()">+ Nuevo</small>
+                    </div>
+                    <div id="adv-upcoming-payments" style="margin-bottom:16px;"></div>
+
+                    <!-- Income Distribution -->
+                    <div id="adv-income-dist-section" style="display:none;margin-bottom:16px;">
+                        <div class="section-title"><span>💰 Distribución del Ingreso</span></div>
+                        <div id="adv-income-dist"></div>
+                    </div>
+
+                    <!-- Predictions -->
+                    <div class="section-title"><span>🔮 Predicciones</span></div>
+                    <div id="advisor-predictions" style="margin-bottom:16px;"></div>
+
+                    <!-- Priority Actions -->
+                    <div class="section-title"><span>🎯 Acciones Prioritarias</span></div>
+                    <div id="advisor-actions" style="margin-bottom:16px;"></div>
+
+                    <!-- Smart Insights -->
+                    <div class="section-title"><span>💡 Análisis Inteligente</span></div>
+                    <div id="advisor-insights" style="margin-bottom:16px;"></div>
+
+                    <!-- Debt Recovery -->
+                    <div id="advisor-debt-section" style="display:none;">
+                        <div class="section-title"><span>🚑 Plan de Recuperación</span></div>
+                        <div id="advisor-debt-plan" style="margin-bottom:16px;"></div>
+                    </div>
+
+                    <!-- Achievements -->
+                    <div class="section-title"><span>🏆 Logros</span></div>
+                    <div id="adv-achievements" style="margin-bottom:16px;"></div>
+
+                    <!-- Weekly Challenge -->
+                    <div id="adv-challenge-section" style="margin-bottom:16px;"></div>
+
+                    <!-- Score Breakdown -->
+                    <div class="section-title"><span>📋 Desglose del Score</span></div>
+                    <div id="advisor-breakdown" class="card" style="margin-bottom:16px;"></div>
+
+                    <!-- Quick Nav -->
+                    <div style="display:flex;gap:10px;margin-bottom:16px;">
+                        <button class="btn btn-secondary" style="flex:1;" onclick="navigateTo('reports')">📊 Reportes</button>
+                        <button class="btn btn-secondary" style="flex:1;" onclick="openIncomeConfigModal()">⚙️ Config Ingresos</button>
+                    </div>
                 </div>
 
                 <!-- === REPORTS PAGE === -->
@@ -1721,9 +1822,9 @@
                     <span>📋</span>
                     <small>Deudas</small>
                 </button>
-                <button class="nav-item" onclick="navigateTo('reports')" data-page="reports">
-                    <span>📊</span>
-                    <small>Reportes</small>
+                <button class="nav-item" onclick="navigateTo('advisor')" data-page="advisor">
+                    <span>🧠</span>
+                    <small>Asesor</small>
                 </button>
             </nav>
         </div>
@@ -2049,6 +2150,103 @@
                         <button class="btn btn-secondary" onclick="cancelEditTransaction()">Cancelar</button>
                         <button class="btn btn-primary" onclick="saveEditTransaction()">💾 Guardar</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduled Payment Modal -->
+        <div class="modal-overlay" id="modal-scheduled">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">📅 Pago Programado</h3>
+                <input type="hidden" id="sched-edit-id">
+                <div class="form-group">
+                    <label class="form-label">Nombre del pago</label>
+                    <input type="text" class="form-input" id="sched-name" placeholder="Ej: Alquiler, Electricidad, Matrícula">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Monto</label>
+                        <input type="number" class="form-input" id="sched-amount" step="0.01" inputmode="decimal" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Frecuencia</label>
+                        <select class="form-select" id="sched-freq">
+                            <option value="monthly">Mensual</option>
+                            <option value="biweekly">Quincenal</option>
+                            <option value="weekly">Semanal</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="semiannual">Semestral</option>
+                            <option value="annual">Anual</option>
+                            <option value="once">Único</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Próximo vencimiento</label>
+                        <input type="date" class="form-input" id="sched-due">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cuenta</label>
+                        <select class="form-select" id="sched-account"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-select" id="sched-category"></select>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;">
+                    <label class="toggle"><input type="checkbox" id="sched-penalty"><span class="toggle-slider"></span></label>
+                    <span style="font-size:13px;">Tiene mora/penalización</span>
+                    <input type="number" class="form-input" id="sched-penalty-amount" placeholder="Mora L" style="width:100px;display:none;" step="0.01">
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+                    <label class="toggle"><input type="checkbox" id="sched-auto"><span class="toggle-slider"></span></label>
+                    <span style="font-size:13px;">Registrar automáticamente al vencer</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notas (opcional)</label>
+                    <input type="text" class="form-input" id="sched-notes" placeholder="Ej: Número de cuenta, referencia">
+                </div>
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-scheduled')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveScheduledPayment()">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Income Config Modal -->
+        <div class="modal-overlay" id="modal-income-config">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">💰 Configurar Ingresos</h3>
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Esto ayuda al asesor a calcular tu presupuesto diario y predicciones</p>
+                <div class="form-group">
+                    <label class="form-label">¿Cada cuánto cobras?</label>
+                    <select class="form-select" id="cfg-income-freq" onchange="togglePayDay2()">
+                        <option value="monthly">Mensual</option>
+                        <option value="biweekly">Quincenal</option>
+                        <option value="weekly">Semanal</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Día de pago 1</label>
+                        <input type="number" class="form-input" id="cfg-pay-day-1" min="1" max="31" value="15">
+                    </div>
+                    <div class="form-group" id="cfg-pay-day-2-group">
+                        <label class="form-label">Día de pago 2</label>
+                        <input type="number" class="form-input" id="cfg-pay-day-2" min="1" max="31" value="30">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ingreso mensual aproximado</label>
+                    <input type="number" class="form-input" id="cfg-monthly-income" step="0.01" inputmode="decimal" placeholder="0.00">
+                </div>
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-income-config')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveIncomeConfig()">Guardar</button>
                 </div>
             </div>
         </div>
@@ -2641,6 +2839,7 @@
         else if (page === 'transactions') renderTransactionsPage();
         else if (page === 'budgets') renderBudgetsPage();
         else if (page === 'reports') renderReports();
+        else if (page === 'advisor') renderAdvisorPage();
         else if (page === 'family') renderFamilyPage();
     }
 
@@ -2737,9 +2936,12 @@
             loadDebts(),
             loadBudgets(),
             loadFamilyData(),
-            loadRecurring()
+            loadRecurring(),
+            loadScheduledPayments(),
+            loadStreak()
         ]);
         await processRecurringTransactions();
+        await updateStreak();
         renderDashboard();
         updateSettingsUI();
     }
@@ -2800,7 +3002,7 @@
         const titles = {
             dashboard: 'Dashboard', accounts: 'Mis Cuentas', transactions: 'Movimientos',
             debts: 'Deudas', budgets: 'Presupuestos', reports: 'Reportes', settings: 'Configuración',
-            family: '👨‍👩‍👧‍👦 Familia'
+            family: '👨‍👩‍👧‍👦 Familia', advisor: '🧠 Asesor Financiero'
         };
         document.getElementById('page-title').textContent = titles[page] || 'Mayordomía';
 
@@ -2811,6 +3013,7 @@
         else if (page === 'debts') renderDebtsPage();
         else if (page === 'budgets') renderBudgetsPage();
         else if (page === 'reports') renderReports();
+        else if (page === 'advisor') renderAdvisorPage();
         else if (page === 'family') { loadFamilyData().then(() => renderFamilyPage()); }
     }
 
@@ -2927,6 +3130,17 @@
         } else {
             alertsEl.style.display = 'none';
         }
+
+        // Daily budget & streak on dashboard
+        try {
+            const a = analyzeFinances();
+            const budgetLeft = Math.max(0, a.dailyBudget - a.spentToday);
+            const budgetColor = budgetLeft > 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+            document.getElementById('dash-daily-budget').innerHTML = `<span style="color:${budgetColor}">${fmt(budgetLeft)}</span>`;
+            document.getElementById('dash-streak').textContent = userStreak?.current_streak || 0;
+            document.getElementById('dash-streak-icon').textContent = (userStreak?.current_streak||0) >= 7 ? '🔥' : '⭐';
+            renderDashPaymentAlert(a);
+        } catch(e) { console.warn('Dashboard advisor sync:', e); }
     }
 
     function renderTransactionItem(t) {
@@ -4103,6 +4317,588 @@
                 📤 Exportar Movimientos
             </button>
         `;
+    }
+
+    // ========================
+    // FINANCIAL INTELLIGENCE ENGINE
+    // ========================
+    let scheduledPayments = [];
+    let userStreak = null;
+
+    async function loadScheduledPayments() {
+        try {
+            const { data, error } = await supabaseClient.from('scheduled_payments').select('*, categories(name, icon)')
+                .eq('user_id', currentUser.id).eq('is_active', true).order('next_due_date');
+            scheduledPayments = error ? [] : (data || []);
+        } catch(e) { scheduledPayments = []; }
+    }
+
+    async function loadStreak() {
+        try {
+            const { data, error } = await supabaseClient.from('user_streaks').select('*')
+                .eq('user_id', currentUser.id).maybeSingle();
+            if (!error && data) { userStreak = data; }
+            else {
+                await supabaseClient.from('user_streaks').upsert({ user_id: currentUser.id, current_streak: 0, longest_streak: 0, total_days_active: 0, level: 1, xp: 0, achievements: [] });
+                userStreak = { current_streak: 0, longest_streak: 0, total_days_active: 0, level: 1, xp: 0, achievements: [], last_activity_date: null };
+            }
+        } catch(e) { userStreak = { current_streak: 0, longest_streak: 0, total_days_active: 0, level: 1, xp: 0, achievements: [] }; }
+    }
+
+    async function updateStreak() {
+        if (!userStreak) return;
+        const today = todayStr();
+        if (userStreak.last_activity_date === today) return;
+        const yesterday = new Date(hnNow()); yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+        const isConsecutive = userStreak.last_activity_date === yesterdayStr;
+        const newStreak = isConsecutive ? userStreak.current_streak + 1 : 1;
+        const longest = Math.max(newStreak, userStreak.longest_streak || 0);
+        const newXp = (userStreak.xp || 0) + 10 + (newStreak >= 7 ? 5 : 0);
+        const newLevel = Math.floor(newXp / 100) + 1;
+        const upd = { current_streak: newStreak, longest_streak: longest, last_activity_date: today, total_days_active: (userStreak.total_days_active || 0) + 1, xp: newXp, level: newLevel };
+        await supabaseClient.from('user_streaks').update(upd).eq('user_id', currentUser.id);
+        Object.assign(userStreak, upd);
+        checkAchievements();
+    }
+
+    // --- ACHIEVEMENTS ---
+    const ACHIEVEMENTS = [
+        { id: 'first_tx', name: 'Primer Paso', icon: '👣', desc: 'Registra tu primer movimiento', check: () => transactions.length >= 1 },
+        { id: 'streak_7', name: 'Disciplinado', icon: '🔥', desc: '7 días de racha', check: () => (userStreak?.current_streak || 0) >= 7 },
+        { id: 'streak_30', name: 'Mayordomo', icon: '👑', desc: '30 días de racha', check: () => (userStreak?.current_streak || 0) >= 30 },
+        { id: 'streak_90', name: 'Maestro', icon: '🏆', desc: '90 días de racha', check: () => (userStreak?.longest_streak || 0) >= 90 },
+        { id: 'sched_5', name: 'Organizado', icon: '📅', desc: '5 pagos programados', check: () => scheduledPayments.length >= 5 },
+        { id: 'zero_other', name: 'Categorizado', icon: '🏷️', desc: 'Sin gastos en "Otro Gasto" este mes', check: () => { const oc = categories.find(c=>c.name==='Otro Gasto'); const {start,end}=getMonthRange(); return oc && transactions.filter(t=>t.category_id===oc.id&&t.date>=start&&t.date<=end).length===0; }},
+        { id: 'save_1k', name: 'Primer Ahorro', icon: '💰', desc: 'L 1,000 en cuenta de ahorro', check: () => accounts.filter(a=>a.type==='savings').reduce((s,a)=>s+parseFloat(a.balance||0),0)>=1000 },
+        { id: 'debt_free', name: 'Libre', icon: '🕊️', desc: 'Sin deudas activas', check: () => debts.filter(d=>parseFloat(d.remaining_amount||d.amount)>0).length===0 },
+        { id: 'budget_all', name: 'Planificador', icon: '📋', desc: 'Presupuesto en 5+ categorías', check: () => budgets.length >= 5 },
+        { id: 'photo_5', name: 'Comprobante', icon: '📸', desc: '5 movimientos con foto', check: () => transactions.filter(t=>t.receipt_url).length >= 5 },
+    ];
+
+    async function checkAchievements() {
+        if (!userStreak) return;
+        const current = userStreak.achievements || [];
+        const earned = current.map(a => a.id || a);
+        let newOnes = [];
+        ACHIEVEMENTS.forEach(a => {
+            if (!earned.includes(a.id) && a.check()) {
+                newOnes.push({ id: a.id, earned_at: todayStr() });
+            }
+        });
+        if (newOnes.length > 0) {
+            const all = [...current, ...newOnes];
+            await supabaseClient.from('user_streaks').update({ achievements: all }).eq('user_id', currentUser.id);
+            userStreak.achievements = all;
+            newOnes.forEach(a => { const def = ACHIEVEMENTS.find(d=>d.id===a.id); if(def) showToast(`🏆 Logro: ${def.name}!`); });
+        }
+    }
+
+    // --- ANALYZE FINANCES ---
+    function analyzeFinances() {
+        const now = hnNow();
+        const { start: ms, end: me } = getMonthRange();
+        const monthTxs = transactions.filter(t => t.date >= ms && t.date <= me);
+        const monthIncome = monthTxs.filter(t => t.type === 'income').reduce((s,t) => s + parseFloat(t.amount), 0);
+        const monthExpenses = monthTxs.filter(t => t.type === 'expense').reduce((s,t) => s + parseFloat(t.amount), 0);
+        const totalBalance = accounts.reduce((s,a) => s + parseFloat(a.balance||0), 0);
+        const totalDebt = debts.reduce((s,d) => s + parseFloat(d.remaining_amount || d.amount || 0), 0);
+        const monthlyDebtPayment = debts.reduce((s,d) => s + parseFloat(d.monthly_payment || 0), 0);
+        const estMonthlyIncome = userProfile?.monthly_income || monthIncome || 1;
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        const dayOfMonth = now.getDate();
+        const daysLeft = daysInMonth - dayOfMonth;
+        const freq = userProfile?.income_frequency || 'monthly';
+        const pd1 = userProfile?.pay_day_1 || 15;
+        const pd2 = userProfile?.pay_day_2 || 30;
+
+        // Days to next payday
+        let daysToPayday = daysLeft;
+        if (freq === 'biweekly') {
+            const nextDays = [pd1, pd2].map(d => { let diff = d - dayOfMonth; return diff <= 0 ? diff + daysInMonth : diff; });
+            daysToPayday = Math.min(...nextDays);
+        } else if (freq === 'monthly') {
+            let diff = pd1 - dayOfMonth;
+            daysToPayday = diff <= 0 ? diff + daysInMonth : diff;
+        } else { daysToPayday = 7 - (now.getDay() || 7); }
+
+        // Upcoming scheduled totals
+        const today = todayStr();
+        const in30 = new Date(now); in30.setDate(in30.getDate()+30);
+        const in30Str = `${in30.getFullYear()}-${String(in30.getMonth()+1).padStart(2,'0')}-${String(in30.getDate()).padStart(2,'0')}`;
+        const upcomingPayments = scheduledPayments.filter(p => p.next_due_date >= today && p.next_due_date <= in30Str);
+        const upcomingTotal = upcomingPayments.reduce((s,p) => s + parseFloat(p.amount), 0);
+
+        // Committed before next payday
+        const nextPaydayDate = new Date(now); nextPaydayDate.setDate(nextPaydayDate.getDate() + daysToPayday);
+        const npStr = `${nextPaydayDate.getFullYear()}-${String(nextPaydayDate.getMonth()+1).padStart(2,'0')}-${String(nextPaydayDate.getDate()).padStart(2,'0')}`;
+        const committedBeforePay = scheduledPayments.filter(p => p.next_due_date >= today && p.next_due_date <= npStr).reduce((s,p) => s + parseFloat(p.amount), 0);
+
+        // Daily budget
+        const cashAccounts = accounts.filter(a => !['tithe','offering','firstfruits','savings'].includes(a.type));
+        const spendable = cashAccounts.reduce((s,a) => s + parseFloat(a.balance||0), 0);
+        const afterCommitments = Math.max(0, spendable - committedBeforePay);
+        const dailyBudget = daysToPayday > 0 ? afterCommitments / daysToPayday : afterCommitments;
+
+        // Today's spending
+        const todayTxs = transactions.filter(t => t.date === today && t.type === 'expense');
+        const spentToday = todayTxs.reduce((s,t) => s + parseFloat(t.amount), 0);
+
+        // Spending by category this month
+        const catSpending = {};
+        monthTxs.filter(t => t.type === 'expense').forEach(t => {
+            const cat = categories.find(c => c.id === t.category_id);
+            const name = cat?.name || 'Otro';
+            if (!catSpending[name]) catSpending[name] = { amount: 0, icon: cat?.icon || '📝', count: 0 };
+            catSpending[name].amount += parseFloat(t.amount);
+            catSpending[name].count++;
+        });
+
+        // Daily avg spending
+        const dailyAvgSpend = dayOfMonth > 0 ? monthExpenses / dayOfMonth : 0;
+        const projectedMonthEnd = monthExpenses + (dailyAvgSpend * daysLeft);
+
+        // Savings rate
+        const savingsRate = estMonthlyIncome > 0 ? ((estMonthlyIncome - projectedMonthEnd) / estMonthlyIncome * 100) : 0;
+
+        // Debt to income ratio
+        const debtToIncome = estMonthlyIncome > 0 ? (monthlyDebtPayment / estMonthlyIncome * 100) : 0;
+
+        // Emergency fund (months of expenses covered)
+        const savingsBalance = accounts.filter(a => a.type === 'savings').reduce((s,a) => s + parseFloat(a.balance||0), 0);
+        const emergencyMonths = dailyAvgSpend > 0 ? savingsBalance / (dailyAvgSpend * 30) : 0;
+
+        // Registration discipline (days with at least 1 tx in last 7 days)
+        const last7 = [];
+        for (let i = 0; i < 7; i++) { const d = new Date(now); d.setDate(d.getDate()-i); last7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); }
+        const activeDays = last7.filter(d => transactions.some(t => t.date === d)).length;
+
+        // Previous month comparison
+        const pm = new Date(now.getFullYear(), now.getMonth()-1, 1);
+        const pmStart = `${pm.getFullYear()}-${String(pm.getMonth()+1).padStart(2,'0')}-01`;
+        const pmEnd = `${pm.getFullYear()}-${String(pm.getMonth()+1).padStart(2,'0')}-${String(new Date(pm.getFullYear(), pm.getMonth()+1, 0).getDate()).padStart(2,'0')}`;
+        const prevExpenses = transactions.filter(t => t.type==='expense' && t.date>=pmStart && t.date<=pmEnd).reduce((s,t)=>s+parseFloat(t.amount),0);
+        const trend = prevExpenses > 0 ? ((monthExpenses - prevExpenses) / prevExpenses * 100) : 0;
+
+        return { monthIncome, monthExpenses, totalBalance, totalDebt, monthlyDebtPayment, estMonthlyIncome, daysInMonth, dayOfMonth, daysLeft, daysToPayday, upcomingPayments, upcomingTotal, committedBeforePay, spendable, dailyBudget, spentToday, catSpending, dailyAvgSpend, projectedMonthEnd, savingsRate, debtToIncome, emergencyMonths, activeDays, trend, prevExpenses, savingsBalance, freq, pd1, pd2, afterCommitments };
+    }
+
+    // --- HEALTH SCORE ---
+    function calcHealthScore(a) {
+        let score = 0;
+        // Savings rate (25pts)
+        const sr = Math.max(-20, Math.min(50, a.savingsRate));
+        score += Math.max(0, (sr + 20) / 70 * 25);
+        // Commitment coverage (25pts)
+        const coverage = a.spendable > 0 && a.upcomingTotal > 0 ? Math.min(1, a.spendable / a.upcomingTotal) : 1;
+        score += coverage * 25;
+        // Debt ratio (20pts)
+        const dr = Math.min(100, a.debtToIncome);
+        score += Math.max(0, (100 - dr) / 100 * 20);
+        // Emergency fund (15pts)
+        score += Math.min(1, a.emergencyMonths) * 15;
+        // Discipline (10pts)
+        score += (a.activeDays / 7) * 10;
+        // Trend (5pts)
+        score += a.trend <= 0 ? 5 : Math.max(0, 5 - (a.trend / 20) * 5);
+        return Math.round(Math.max(0, Math.min(100, score)));
+    }
+
+    function getScoreInfo(score) {
+        if (score >= 80) return { emoji: '🟢', label: 'Excelente', color: '#34d399', desc: 'Tus finanzas están en gran forma' };
+        if (score >= 60) return { emoji: '🔵', label: 'Bueno', color: '#22d3ee', desc: 'Vas bien, hay espacio para mejorar' };
+        if (score >= 40) return { emoji: '🟡', label: 'Regular', color: '#fbbf24', desc: 'Necesitas más control en tus gastos' };
+        if (score >= 20) return { emoji: '🟠', label: 'En riesgo', color: '#fb923c', desc: 'Tus finanzas necesitan atención urgente' };
+        return { emoji: '🔴', label: 'Crítico', color: '#f87171', desc: 'Plan de recuperación necesario' };
+    }
+
+    // --- RENDER ADVISOR PAGE ---
+    function renderAdvisorPage() {
+        const a = analyzeFinances();
+        const score = calcHealthScore(a);
+        const si = getScoreInfo(score);
+
+        // Daily budget
+        const budgetColor = (a.dailyBudget - a.spentToday) > 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+        document.getElementById('adv-daily-budget').innerHTML = `<span style="color:${budgetColor}">${fmt(Math.max(0, a.dailyBudget - a.spentToday))}</span>`;
+        document.getElementById('adv-spent-today').textContent = fmt(a.spentToday);
+        document.getElementById('adv-days-to-pay').textContent = a.daysToPayday;
+        document.getElementById('adv-available').textContent = fmt(a.spendable);
+        document.getElementById('adv-daily-context').textContent = `${fmt(a.dailyBudget)}/día · ${fmt(a.committedBeforePay)} comprometido`;
+
+        // Streak
+        document.getElementById('adv-streak').textContent = userStreak?.current_streak || 0;
+        document.getElementById('adv-streak-emoji').textContent = (userStreak?.current_streak||0) >= 7 ? '🔥' : (userStreak?.current_streak||0) >= 1 ? '⭐' : '💤';
+        const lvl = userStreak?.level || 1;
+        const lvlNames = { 1: 'Principiante', 2: 'Aprendiz', 3: 'Disciplinado', 4: 'Experto', 5: 'Mayordomo', 6: 'Maestro', 7: 'Leyenda' };
+        document.getElementById('adv-level').textContent = `Nivel ${lvl} · ${lvlNames[Math.min(lvl,7)] || 'Leyenda'}`;
+
+        // Score
+        document.getElementById('advisor-score').textContent = score;
+        document.getElementById('advisor-score-emoji').textContent = si.emoji;
+        document.getElementById('advisor-score-label').innerHTML = `<span style="color:${si.color}">${si.label}</span>`;
+
+        // Dashboard sync
+        document.getElementById('dash-daily-budget').innerHTML = `<span style="color:${budgetColor}">${fmt(Math.max(0, a.dailyBudget - a.spentToday))}</span>`;
+        document.getElementById('dash-streak').textContent = userStreak?.current_streak || 0;
+        document.getElementById('dash-streak-icon').textContent = (userStreak?.current_streak||0) >= 7 ? '🔥' : '⭐';
+
+        // Upcoming payments
+        renderUpcomingPayments(a);
+
+        // Income distribution
+        renderIncomeDistribution(a);
+
+        // Predictions
+        renderPredictions(a);
+
+        // Priority actions
+        renderPriorityActions(a);
+
+        // Smart insights
+        renderSmartInsights(a);
+
+        // Debt plan
+        renderDebtPlan(a);
+
+        // Score breakdown
+        renderScoreBreakdown(a, score);
+
+        // Achievements
+        renderAchievements();
+
+        // Challenge
+        renderWeeklyChallenge(a);
+
+        // Dashboard payment alert
+        renderDashPaymentAlert(a);
+    }
+
+    function renderUpcomingPayments(a) {
+        const el = document.getElementById('adv-upcoming-payments');
+        if (scheduledPayments.length === 0) {
+            el.innerHTML = `<div class="card" style="text-align:center;padding:20px;"><p style="color:var(--text-muted);font-size:13px;">No tienes pagos programados</p><button class="btn btn-primary" style="margin-top:12px;" onclick="openScheduledPaymentModal()">📅 Agregar Primer Pago</button></div>`;
+            return;
+        }
+        const today = todayStr();
+        const items = scheduledPayments.slice(0, 8).map(p => {
+            const daysUntil = Math.ceil((new Date(p.next_due_date+'T12:00:00') - new Date(today+'T12:00:00')) / 86400000);
+            const urgency = daysUntil <= 0 ? 'rgba(248,113,113,0.15)' : daysUntil <= 3 ? 'rgba(251,191,36,0.1)' : 'var(--bg-card)';
+            const border = daysUntil <= 0 ? 'rgba(248,113,113,0.3)' : daysUntil <= 3 ? 'rgba(251,191,36,0.3)' : 'var(--border-color)';
+            const urgLabel = daysUntil < 0 ? `⚠️ Vencido hace ${Math.abs(daysUntil)}d` : daysUntil === 0 ? '🔴 Hoy' : daysUntil <= 3 ? `🟡 En ${daysUntil}d` : `${daysUntil}d`;
+            const freqLabel = { monthly:'Mensual', biweekly:'Quincenal', weekly:'Semanal', quarterly:'Trimestral', semiannual:'Semestral', annual:'Anual', once:'Único' }[p.frequency] || '';
+            return `<div style="background:${urgency};border:1px solid ${border};border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="editScheduledPayment('${p.id}')">
+                <span style="font-size:22px;">${p.categories?.icon || '📝'}</span>
+                <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text-muted);">${freqLabel} · ${urgLabel}</div></div>
+                <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${fmt(p.amount)}</div>
+            </div>`;
+        }).join('');
+        el.innerHTML = items + `<div style="text-align:center;padding:8px;"><span style="font-size:13px;color:var(--text-muted);">Total próximos 30 días: <strong>${fmt(a.upcomingTotal)}</strong></span></div>`;
+    }
+
+    function renderIncomeDistribution(a) {
+        if (!a.estMonthlyIncome || a.estMonthlyIncome <= 0) { document.getElementById('adv-income-dist-section').style.display='none'; return; }
+        document.getElementById('adv-income-dist-section').style.display = 'block';
+        const income = a.estMonthlyIncome;
+        const committed = a.upcomingTotal;
+        const debtPay = a.monthlyDebtPayment;
+        const spiritual = userProfile?.spiritual_module_enabled ? income * ((userProfile?.tithe_percentage||10)/100) : 0;
+        const fixed = committed + debtPay + spiritual;
+        const flexible = Math.max(0, income - fixed);
+        const dailyFlex = a.daysInMonth > 0 ? flexible / a.daysInMonth : 0;
+        const items = [
+            { label: '📅 Pagos programados', amount: committed, pct: (committed/income*100).toFixed(0), color: '#22d3ee' },
+            { label: '💳 Cuotas de deuda', amount: debtPay, pct: (debtPay/income*100).toFixed(0), color: '#f87171' },
+        ];
+        if (spiritual > 0) items.push({ label: '✝️ Diezmo/Ofrenda', amount: spiritual, pct: (spiritual/income*100).toFixed(0), color: '#a78bfa' });
+        items.push({ label: '🛒 Gasto diario', amount: flexible, pct: (flexible/income*100).toFixed(0), color: '#34d399' });
+
+        document.getElementById('adv-income-dist').innerHTML = `<div class="card">
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Ingreso estimado: <strong>${fmt(income)}</strong></div>
+            ${items.map(i => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <div style="width:10px;height:10px;border-radius:50%;background:${i.color};flex-shrink:0;"></div>
+                <span style="flex:1;font-size:13px;">${i.label}</span>
+                <span style="font-size:11px;color:var(--text-muted);">${i.pct}%</span>
+                <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;">${fmt(i.amount)}</span>
+            </div>`).join('')}
+            <div style="border-top:1px solid var(--border-color);padding-top:10px;margin-top:4px;text-align:center;">
+                <span style="font-size:13px;">Tu presupuesto diario flexible: <strong style="color:var(--accent-success);">${fmt(dailyFlex)}</strong></span>
+            </div>
+        </div>`;
+    }
+
+    function renderPredictions(a) {
+        const el = document.getElementById('advisor-predictions');
+        const predictions = [];
+        // Month-end projection
+        const netProj = a.estMonthlyIncome - a.projectedMonthEnd;
+        predictions.push({ icon: netProj >= 0 ? '✅' : '🚨', text: `A este ritmo, ${netProj >= 0 ? 'cerrarás el mes con' : 'te faltarán'} <strong style="color:${netProj>=0?'var(--accent-success)':'var(--accent-danger)'};">${fmt(Math.abs(netProj))}</strong>`, sub: `Gasto diario promedio: ${fmt(a.dailyAvgSpend)} · Proyectado: ${fmt(a.projectedMonthEnd)}` });
+        // Cash-out date
+        if (a.dailyAvgSpend > 0 && a.spendable > 0) {
+            const daysUntilBroke = Math.floor(a.spendable / a.dailyAvgSpend);
+            const brokeDate = new Date(hnNow()); brokeDate.setDate(brokeDate.getDate() + daysUntilBroke);
+            if (daysUntilBroke < a.daysToPayday) {
+                predictions.push({ icon: '⚠️', text: `Tu dinero se agota <strong style="color:var(--accent-danger);">en ${daysUntilBroke} días</strong> (antes de cobrar)`, sub: `Cobras en ${a.daysToPayday} días. Necesitas reducir a ${fmt(a.spendable / Math.max(1, a.daysToPayday))}/día` });
+            }
+        }
+        // Upcoming payment collision
+        const next7 = scheduledPayments.filter(p => { const d = Math.ceil((new Date(p.next_due_date+'T12:00:00') - new Date(todayStr()+'T12:00:00'))/86400000); return d >= 0 && d <= 7; });
+        if (next7.length > 0) {
+            const t7 = next7.reduce((s,p)=>s+parseFloat(p.amount),0);
+            if (t7 > a.spendable * 0.5) {
+                predictions.push({ icon: '📅', text: `<strong>${next7.length} pagos</strong> vencen esta semana por <strong>${fmt(t7)}</strong>`, sub: next7.map(p=>p.name).join(', ') });
+            }
+        }
+        el.innerHTML = predictions.length === 0 ? '<div class="card"><p style="color:var(--text-muted);font-size:13px;">Registra más movimientos para ver predicciones</p></div>' :
+            predictions.map(p => `<div class="card" style="margin-bottom:8px;"><div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:20px;">${p.icon}</span><div><p style="font-size:13px;">${p.text}</p><p style="font-size:11px;color:var(--text-muted);margin-top:2px;">${p.sub}</p></div></div></div>`).join('');
+    }
+
+    function renderPriorityActions(a) {
+        const el = document.getElementById('advisor-actions');
+        const actions = [];
+        // Top spending categories
+        const sorted = Object.entries(a.catSpending).sort((x,y) => y[1].amount - x[1].amount);
+        if (sorted[0] && sorted[0][1].amount > a.monthExpenses * 0.25) {
+            const top = sorted[0];
+            actions.push({ icon: top[1].icon, text: `${top[0]} consume ${Math.round(top[1].amount/a.monthExpenses*100)}% de tus gastos`, sub: `${fmt(top[1].amount)} este mes. ¿Puedes reducir un 20%? Ahorrarías ${fmt(top[1].amount*0.2)}/mes`, priority: 'high' });
+        }
+        // No income config
+        if (!userProfile?.monthly_income) { actions.push({ icon: '⚙️', text: 'Configura tus ingresos', sub: 'Necesario para predicciones precisas y presupuesto diario', priority: 'high', action: 'openIncomeConfigModal()' }); }
+        // No scheduled payments
+        if (scheduledPayments.length === 0) { actions.push({ icon: '📅', text: 'Agrega tus pagos programados', sub: 'Alquiler, electricidad, cuotas. El asesor necesita saber tus compromisos', priority: 'high', action: 'openScheduledPaymentModal()' }); }
+        // Too much eating out
+        const foodOut = a.catSpending['Comidas Fuera'];
+        if (foodOut && foodOut.amount > 1500 && a.dayOfMonth <= 15) { actions.push({ icon: '🍔', text: `L ${Math.round(foodOut.amount)} en comidas fuera en ${a.dayOfMonth} días`, sub: `Son ~${fmt(foodOut.amount/a.dayOfMonth)}/día. Cocinar 3 días/semana ahorra ~${fmt(foodOut.amount*0.4)}/mes`, priority: 'medium' }); }
+        // High debt ratio
+        if (a.debtToIncome > 40) { actions.push({ icon: '💳', text: `Tus deudas consumen ${Math.round(a.debtToIncome)}% de tu ingreso`, sub: 'Lo recomendado es máximo 35%. Revisa el plan de recuperación abajo', priority: 'high' }); }
+        // No emergency fund
+        if (a.emergencyMonths < 0.5) { actions.push({ icon: '🛡️', text: 'No tienes fondo de emergencia', sub: `Meta mínima: 1 mes de gastos (${fmt(a.dailyAvgSpend*30)}). Empieza con ${fmt(a.dailyAvgSpend*30*0.1)}/mes`, priority: 'medium' }); }
+
+        const pColors = { high: 'rgba(248,113,113,0.1)', medium: 'rgba(251,191,36,0.08)', low: 'rgba(52,211,153,0.08)' };
+        el.innerHTML = actions.length === 0 ? '<div class="card"><p style="color:var(--text-muted);font-size:13px;">¡Todo en orden! Sigue así</p></div>' :
+            actions.map(ac => `<div class="card" style="margin-bottom:8px;background:${pColors[ac.priority]||''};${ac.action?'cursor:pointer;':''}" ${ac.action?`onclick="${ac.action}"`:''}><div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:22px;">${ac.icon}</span><div><p style="font-size:13px;font-weight:500;">${ac.text}</p><p style="font-size:11px;color:var(--text-muted);margin-top:2px;">${ac.sub}</p></div></div></div>`).join('');
+    }
+
+    function renderSmartInsights(a) {
+        const el = document.getElementById('advisor-insights');
+        const insights = [];
+        // Spending trend vs last month
+        if (a.prevExpenses > 0) {
+            const dir = a.trend > 0 ? 'más' : 'menos';
+            insights.push(`📈 Llevas ${Math.abs(Math.round(a.trend))}% ${dir} gasto que el mes pasado`);
+        }
+        // Ant expenses (small frequent purchases)
+        const antCats = Object.entries(a.catSpending).filter(([n,d]) => d.count >= 5 && d.amount/d.count < 100);
+        antCats.forEach(([name, data]) => {
+            insights.push(`🐜 ${name}: ${data.count} compras de ~${fmt(data.amount/data.count)} promedio = ${fmt(data.amount)} total`);
+        });
+        // Registration gaps
+        if (a.activeDays < 4) { insights.push(`📝 Solo registraste ${a.activeDays} de los últimos 7 días. Los días sin registro son dinero invisible`); }
+        // Savings potential
+        if (a.savingsRate < 10 && a.monthIncome > 0) { insights.push(`💰 Tu tasa de ahorro es ${Math.round(a.savingsRate)}%. Intenta llegar al 10% (${fmt(a.estMonthlyIncome*0.1)}/mes)`); }
+        el.innerHTML = insights.length === 0 ? '<div class="card"><p style="color:var(--text-muted);font-size:13px;">Necesito más datos. Sigue registrando tus gastos</p></div>' :
+            insights.map(i => `<div class="card" style="margin-bottom:8px;padding:12px;"><p style="font-size:13px;">${i}</p></div>`).join('');
+    }
+
+    function renderDebtPlan(a) {
+        const sec = document.getElementById('advisor-debt-section');
+        const el = document.getElementById('advisor-debt-plan');
+        const activeDebts = debts.filter(d => parseFloat(d.remaining_amount || d.amount || 0) > 0);
+        if (activeDebts.length === 0) { sec.style.display = 'none'; return; }
+        sec.style.display = 'block';
+        // Snowball (smallest first) vs Avalanche (highest rate first)
+        const snowball = [...activeDebts].sort((x,y) => parseFloat(x.remaining_amount||x.amount) - parseFloat(y.remaining_amount||y.amount));
+        const totalDebt = activeDebts.reduce((s,d) => s + parseFloat(d.remaining_amount||d.amount||0), 0);
+        const totalMinPayment = activeDebts.reduce((s,d) => s + parseFloat(d.monthly_payment||0), 0);
+        const extraPossible = Math.max(0, a.estMonthlyIncome - a.projectedMonthEnd);
+        const monthsToFree = totalMinPayment > 0 ? Math.ceil(totalDebt / totalMinPayment) : 999;
+        const monthsWithExtra = (totalMinPayment + extraPossible) > 0 ? Math.ceil(totalDebt / (totalMinPayment + extraPossible)) : 999;
+
+        el.innerHTML = `<div class="card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                <div style="text-align:center;"><div style="font-size:11px;color:var(--text-muted);">Deuda total</div><div style="font-family:var(--font-mono);font-weight:700;color:var(--accent-danger);font-size:16px;">${fmt(totalDebt)}</div></div>
+                <div style="text-align:center;"><div style="font-size:11px;color:var(--text-muted);">Cuota mensual</div><div style="font-family:var(--font-mono);font-weight:700;font-size:16px;">${fmt(totalMinPayment)}</div></div>
+            </div>
+            <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;">
+                <p style="font-size:13px;font-weight:600;margin-bottom:8px;">🎯 Método Bola de Nieve</p>
+                <p style="font-size:12px;color:var(--text-muted);">Paga primero la deuda más pequeña. Genera motivación al ver deudas eliminadas.</p>
+                <div style="margin-top:8px;">
+                    ${snowball.map((d,i) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;${i<snowball.length-1?'border-bottom:1px solid var(--border-color);':''}">
+                        <span style="background:var(--accent-primary);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${i+1}</span>
+                        <span style="flex:1;font-size:13px;">${d.name || d.creditor || 'Deuda'}</span>
+                        <span style="font-family:var(--font-mono);font-size:13px;">${fmt(d.remaining_amount || d.amount)}</span>
+                    </div>`).join('')}
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+                    <div style="font-size:11px;color:var(--text-muted);">Solo cuotas mínimas</div>
+                    <div style="font-family:var(--font-mono);font-weight:700;font-size:18px;">${monthsToFree > 120 ? '10+ años' : monthsToFree + ' meses'}</div>
+                </div>
+                <div style="background:rgba(52,211,153,0.1);border-radius:var(--radius-sm);padding:12px;text-align:center;">
+                    <div style="font-size:11px;color:var(--text-muted);">+${fmt(extraPossible)} extra/mes</div>
+                    <div style="font-family:var(--font-mono);font-weight:700;font-size:18px;color:var(--accent-success);">${monthsWithExtra > 120 ? '10+ años' : monthsWithExtra + ' meses'}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function renderScoreBreakdown(a, score) {
+        const el = document.getElementById('advisor-breakdown');
+        const items = [
+            { label: 'Tasa de ahorro', val: `${Math.round(a.savingsRate)}%`, max: 25, score: Math.max(0, (Math.max(-20, Math.min(50, a.savingsRate)) + 20) / 70 * 25) },
+            { label: 'Cobertura compromisos', val: a.upcomingTotal > 0 ? `${Math.round(Math.min(100, a.spendable/a.upcomingTotal*100))}%` : '✓', max: 25, score: (a.spendable > 0 && a.upcomingTotal > 0 ? Math.min(1, a.spendable / a.upcomingTotal) : 1) * 25 },
+            { label: 'Ratio deuda/ingreso', val: `${Math.round(a.debtToIncome)}%`, max: 20, score: Math.max(0, (100 - Math.min(100, a.debtToIncome)) / 100 * 20) },
+            { label: 'Fondo emergencia', val: `${a.emergencyMonths.toFixed(1)} meses`, max: 15, score: Math.min(1, a.emergencyMonths) * 15 },
+            { label: 'Disciplina registro', val: `${a.activeDays}/7 días`, max: 10, score: (a.activeDays / 7) * 10 },
+            { label: 'Tendencia', val: `${a.trend > 0 ? '+' : ''}${Math.round(a.trend)}%`, max: 5, score: a.trend <= 0 ? 5 : Math.max(0, 5 - (a.trend / 20) * 5) },
+        ];
+        el.innerHTML = items.map(i => {
+            const pct = (i.score / i.max * 100);
+            const c = pct >= 70 ? 'var(--accent-success)' : pct >= 40 ? 'var(--accent-warning)' : 'var(--accent-danger)';
+            return `<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>${i.label}</span><span style="color:var(--text-muted);">${i.val} · ${Math.round(i.score)}/${i.max}</span></div><div style="height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${c};border-radius:3px;transition:width 0.5s;"></div></div></div>`;
+        }).join('') + `<div style="text-align:center;padding-top:8px;border-top:1px solid var(--border-color);"><span style="font-family:var(--font-mono);font-size:20px;font-weight:700;">${score}</span><span style="font-size:13px;color:var(--text-muted);"> / 100</span></div>`;
+    }
+
+    function renderAchievements() {
+        const el = document.getElementById('adv-achievements');
+        const earned = (userStreak?.achievements || []).map(a => a.id || a);
+        el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">` +
+            ACHIEVEMENTS.map(a => {
+                const has = earned.includes(a.id);
+                return `<div style="text-align:center;padding:8px 4px;border-radius:var(--radius-sm);background:${has ? 'rgba(52,211,153,0.1)' : 'var(--bg-input)'};border:1px solid ${has ? 'rgba(52,211,153,0.2)' : 'var(--border-color)'};opacity:${has?1:0.5};" title="${a.desc}">
+                    <div style="font-size:24px;">${a.icon}</div>
+                    <div style="font-size:9px;color:var(--text-muted);margin-top:2px;">${a.name}</div>
+                </div>`;
+            }).join('') + '</div>';
+    }
+
+    function renderWeeklyChallenge(a) {
+        const el = document.getElementById('adv-challenge-section');
+        const challenges = [];
+        if (a.catSpending['Comidas Fuera'] && a.catSpending['Comidas Fuera'].amount > 500) challenges.push({ text: `Gasta menos de ${fmt(a.catSpending['Comidas Fuera'].amount * 0.7)} en Comidas Fuera esta semana`, icon: '🍔' });
+        else if (a.activeDays < 5) challenges.push({ text: 'Registra todos tus gastos por 7 días consecutivos', icon: '📝' });
+        else challenges.push({ text: `Mantén tu gasto diario por debajo de ${fmt(a.dailyBudget)}`, icon: '💪' });
+        el.innerHTML = challenges.length > 0 ? `<div class="section-title"><span>🎯 Reto de la Semana</span></div><div class="card" style="background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(34,211,238,0.08));border:1px solid rgba(168,85,247,0.15);"><div style="display:flex;gap:10px;align-items:center;"><span style="font-size:28px;">${challenges[0].icon}</span><p style="font-size:14px;font-weight:500;">${challenges[0].text}</p></div></div>` : '';
+    }
+
+    function renderDashPaymentAlert(a) {
+        const el = document.getElementById('dash-payment-alert');
+        const today = todayStr();
+        const urgent = scheduledPayments.filter(p => {
+            const d = Math.ceil((new Date(p.next_due_date+'T12:00:00') - new Date(today+'T12:00:00'))/86400000);
+            return d >= 0 && d <= 3;
+        });
+        if (urgent.length === 0) { el.style.display = 'none'; return; }
+        el.style.display = 'block';
+        el.innerHTML = urgent.map(p => {
+            const d = Math.ceil((new Date(p.next_due_date+'T12:00:00') - new Date(today+'T12:00:00'))/86400000);
+            return `<div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius-sm);margin-bottom:6px;">
+                <span style="font-size:18px;">📅</span>
+                <div style="flex:1;"><p style="font-size:13px;font-weight:500;">${p.name}</p><p style="font-size:11px;color:var(--text-muted);">${d === 0 ? 'Vence hoy' : `Vence en ${d} día${d>1?'s':''}`}</p></div>
+                <span style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${fmt(p.amount)}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // --- SCHEDULED PAYMENTS CRUD ---
+    function openScheduledPaymentModal(id) {
+        document.getElementById('sched-edit-id').value = '';
+        document.getElementById('sched-name').value = '';
+        document.getElementById('sched-amount').value = '';
+        document.getElementById('sched-freq').value = 'monthly';
+        document.getElementById('sched-due').value = todayStr();
+        document.getElementById('sched-notes').value = '';
+        document.getElementById('sched-penalty').checked = false;
+        document.getElementById('sched-penalty-amount').value = '';
+        document.getElementById('sched-penalty-amount').style.display = 'none';
+        document.getElementById('sched-auto').checked = false;
+        const expCats = categories.filter(c => c.type === 'expense').sort((a,b)=>a.name.localeCompare(b.name));
+        document.getElementById('sched-category').innerHTML = `<option value="">Sin categoría</option>` + expCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+        document.getElementById('sched-account').innerHTML = accounts.filter(a=>!['tithe','offering','firstfruits'].includes(a.type)).map(a => `<option value="${a.id}">${ACCOUNT_ICONS[a.type]} ${a.name}</option>`).join('');
+        openModal('modal-scheduled');
+    }
+
+    function editScheduledPayment(id) {
+        const p = scheduledPayments.find(s => s.id === id);
+        if (!p) return;
+        openScheduledPaymentModal();
+        document.getElementById('sched-edit-id').value = p.id;
+        document.getElementById('sched-name').value = p.name;
+        document.getElementById('sched-amount').value = p.amount;
+        document.getElementById('sched-freq').value = p.frequency;
+        document.getElementById('sched-due').value = p.next_due_date;
+        document.getElementById('sched-notes').value = p.notes || '';
+        document.getElementById('sched-penalty').checked = p.has_penalty;
+        document.getElementById('sched-penalty-amount').value = p.penalty_amount || '';
+        document.getElementById('sched-penalty-amount').style.display = p.has_penalty ? 'inline-block' : 'none';
+        document.getElementById('sched-auto').checked = p.auto_register;
+        if (p.category_id) document.getElementById('sched-category').value = p.category_id;
+        if (p.account_id) document.getElementById('sched-account').value = p.account_id;
+    }
+
+    document.getElementById('sched-penalty')?.addEventListener('change', function() {
+        document.getElementById('sched-penalty-amount').style.display = this.checked ? 'inline-block' : 'none';
+    });
+
+    async function saveScheduledPayment() {
+        const id = document.getElementById('sched-edit-id').value;
+        const name = document.getElementById('sched-name').value.trim();
+        const amount = parseFloat(document.getElementById('sched-amount').value);
+        if (!name) return showToast('Ingresa un nombre', 'error');
+        if (!amount || amount <= 0) return showToast('Monto inválido', 'error');
+        const data = {
+            user_id: currentUser.id, name, amount,
+            frequency: document.getElementById('sched-freq').value,
+            next_due_date: document.getElementById('sched-due').value || todayStr(),
+            category_id: document.getElementById('sched-category').value || null,
+            account_id: document.getElementById('sched-account').value || null,
+            has_penalty: document.getElementById('sched-penalty').checked,
+            penalty_amount: parseFloat(document.getElementById('sched-penalty-amount').value) || 0,
+            auto_register: document.getElementById('sched-auto').checked,
+            notes: document.getElementById('sched-notes').value.trim(),
+        };
+        if (id) {
+            const { error } = await supabaseClient.from('scheduled_payments').update(data).eq('id', id);
+            if (error) return showToast('Error: ' + error.message, 'error');
+        } else {
+            const { error } = await supabaseClient.from('scheduled_payments').insert(data);
+            if (error) return showToast('Error: ' + error.message, 'error');
+        }
+        closeModal('modal-scheduled');
+        showToast(id ? '✅ Pago actualizado' : '📅 Pago programado');
+        await loadScheduledPayments();
+        if (currentPage === 'advisor') renderAdvisorPage();
+    }
+
+    // --- INCOME CONFIG ---
+    function openIncomeConfigModal() {
+        document.getElementById('cfg-income-freq').value = userProfile?.income_frequency || 'monthly';
+        document.getElementById('cfg-pay-day-1').value = userProfile?.pay_day_1 || 15;
+        document.getElementById('cfg-pay-day-2').value = userProfile?.pay_day_2 || 30;
+        document.getElementById('cfg-monthly-income').value = userProfile?.monthly_income || '';
+        togglePayDay2();
+        openModal('modal-income-config');
+    }
+
+    function togglePayDay2() {
+        const freq = document.getElementById('cfg-income-freq').value;
+        document.getElementById('cfg-pay-day-2-group').style.display = freq === 'biweekly' ? 'block' : 'none';
+    }
+
+    async function saveIncomeConfig() {
+        const data = {
+            income_frequency: document.getElementById('cfg-income-freq').value,
+            pay_day_1: parseInt(document.getElementById('cfg-pay-day-1').value) || 15,
+            pay_day_2: parseInt(document.getElementById('cfg-pay-day-2').value) || 30,
+            monthly_income: parseFloat(document.getElementById('cfg-monthly-income').value) || 0,
+        };
+        const { error } = await supabaseClient.from('users').update(data).eq('id', currentUser.id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+        Object.assign(userProfile, data);
+        closeModal('modal-income-config');
+        showToast('💰 Configuración guardada');
+        if (currentPage === 'advisor') renderAdvisorPage();
     }
 
     // ========================
