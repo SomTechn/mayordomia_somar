@@ -1567,14 +1567,18 @@
                         <small onclick="openDebtModal()">+ Nueva</small>
                     </div>
                     <div id="debts-summary" class="card" style="margin-bottom: 20px;">
-                        <div class="form-row">
-                            <div>
-                                <p style="font-size: 12px; color: var(--text-muted);">Total Deudas</p>
-                                <p id="total-debt" style="font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent-danger);">L 0</p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                            <div style="text-align:center;">
+                                <p style="font-size: 11px; color: var(--text-muted);">Total Deudas</p>
+                                <p id="total-debt" style="font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--accent-danger);">L 0</p>
                             </div>
-                            <div>
-                                <p style="font-size: 12px; color: var(--text-muted);">Cuota Mensual</p>
-                                <p id="monthly-debt-payment" style="font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent-warning);">L 0</p>
+                            <div style="text-align:center;">
+                                <p style="font-size: 11px; color: var(--text-muted);">Cuota Mensual</p>
+                                <p id="monthly-debt-payment" style="font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--accent-warning);">L 0</p>
+                            </div>
+                            <div style="text-align:center;">
+                                <p style="font-size: 11px; color: var(--text-muted);">Pagado</p>
+                                <p id="total-debt-paid" style="font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--accent-success);">L 0</p>
                             </div>
                         </div>
                     </div>
@@ -1995,42 +1999,85 @@
         <div class="modal-overlay" id="modal-debt">
             <div class="modal-content">
                 <div class="modal-handle"></div>
-                <h3 class="modal-title">Nueva Deuda</h3>
+                <h3 class="modal-title" id="debt-modal-title">Nueva Deuda</h3>
+                <input type="hidden" id="debt-edit-id">
                 
                 <div class="form-group">
-                    <label class="form-label">Acreedor</label>
+                    <label class="form-label">Acreedor / Nombre</label>
                     <input type="text" class="form-input" id="debt-creditor" placeholder="Ej: BAC, Ficohsa, Juan...">
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Monto Original</label>
-                    <input type="number" class="form-input" id="debt-original" placeholder="0.00" inputmode="decimal">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Saldo Actual</label>
-                    <input type="number" class="form-input" id="debt-balance" placeholder="0.00" inputmode="decimal">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Monto Original</label>
+                        <input type="number" class="form-input" id="debt-original" placeholder="0.00" inputmode="decimal" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Saldo Actual</label>
+                        <input type="number" class="form-input" id="debt-balance" placeholder="0.00" inputmode="decimal" step="0.01">
+                    </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Tasa Interés %</label>
-                        <input type="number" class="form-input" id="debt-interest" placeholder="0" inputmode="decimal">
+                        <input type="number" class="form-input" id="debt-interest" placeholder="0" inputmode="decimal" step="0.01">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Cuota Mensual</label>
-                        <input type="number" class="form-input" id="debt-payment" placeholder="0.00" inputmode="decimal">
+                        <label class="form-label">Monto Cuota</label>
+                        <input type="number" class="form-input" id="debt-payment" placeholder="0.00" inputmode="decimal" step="0.01">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Día de Pago</label>
+                    <label class="form-label">Frecuencia de Pago</label>
+                    <select class="form-select" id="debt-freq" onchange="toggleDebtPayDays()">
+                        <option value="monthly">Mensual</option>
+                        <option value="biweekly">Quincenal</option>
+                        <option value="weekly">Semanal</option>
+                    </select>
+                </div>
+
+                <!-- Monthly: day of month -->
+                <div id="debt-monthly-days" class="form-group">
+                    <label class="form-label">Día de pago</label>
                     <input type="number" class="form-input" id="debt-due-day" placeholder="15" min="1" max="31">
+                </div>
+
+                <!-- Biweekly: two days -->
+                <div id="debt-biweekly-days" style="display:none;" class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Primer pago (día)</label>
+                        <input type="number" class="form-input" id="debt-day1" placeholder="15" min="1" max="31">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Segundo pago (día)</label>
+                        <input type="number" class="form-input" id="debt-day2" placeholder="30" min="1" max="31">
+                    </div>
+                </div>
+
+                <!-- Weekly: day of week -->
+                <div id="debt-weekly-day" style="display:none;" class="form-group">
+                    <label class="form-label">Día de la semana</label>
+                    <select class="form-select" id="debt-dow">
+                        <option value="1">Lunes</option>
+                        <option value="2">Martes</option>
+                        <option value="3">Miércoles</option>
+                        <option value="4">Jueves</option>
+                        <option value="5">Viernes</option>
+                        <option value="6">Sábado</option>
+                        <option value="0">Domingo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notas (opcional)</label>
+                    <input type="text" class="form-input" id="debt-notes" placeholder="N° cuenta, referencia, condiciones...">
                 </div>
 
                 <div class="form-row" style="margin-top: 8px;">
                     <button class="btn btn-secondary" onclick="closeModal('modal-debt')">Cancelar</button>
-                    <button class="btn btn-primary" onclick="saveDebt()">Crear</button>
+                    <button class="btn btn-primary" onclick="saveDebt()">Guardar</button>
                 </div>
             </div>
         </div>
@@ -4096,13 +4143,19 @@
     // ========================
     // DEBTS
     // ========================
+    const FREQ_LABELS = { monthly: 'Mensual', biweekly: 'Quincenal', weekly: 'Semanal' };
+    const DOW_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
     function renderDebtsPage() {
         const activeDebts = debts.filter(d => d.status === 'active');
+        const paidDebts = debts.filter(d => d.status === 'paid_off');
         const totalDebt = activeDebts.reduce((s, d) => s + parseFloat(d.current_balance || 0), 0);
         const monthlyPayment = activeDebts.reduce((s, d) => s + parseFloat(d.monthly_payment || 0), 0);
+        const totalPaid = debts.reduce((s, d) => s + (parseFloat(d.original_amount || 0) - parseFloat(d.current_balance || 0)), 0);
 
         document.getElementById('total-debt').textContent = fmt(totalDebt);
         document.getElementById('monthly-debt-payment').textContent = fmt(monthlyPayment);
+        document.getElementById('total-debt-paid').textContent = fmt(Math.max(0, totalPaid));
 
         const container = document.getElementById('debts-list');
         if (debts.length === 0) {
@@ -4113,80 +4166,194 @@
         container.innerHTML = debts.map(d => {
             const progress = d.original_amount > 0 ? ((d.original_amount - d.current_balance) / d.original_amount) * 100 : 0;
             const progressColor = d.status === 'paid_off' ? 'var(--accent-success)' : progress > 50 ? 'var(--accent-warning)' : 'var(--accent-danger)';
+            const freq = d.payment_frequency || 'monthly';
+            const nextPay = calcNextPaymentDate(d);
+            const daysUntil = nextPay ? Math.ceil((nextPay - new Date(todayStr() + 'T12:00:00')) / 86400000) : null;
+
+            // Pay schedule label
+            let schedLabel = '';
+            if (freq === 'monthly') schedLabel = `Día ${d.due_day || '?'}`;
+            else if (freq === 'biweekly') schedLabel = `Días ${d.due_day || '?'} y ${d.pay_day_2 || '?'}`;
+            else if (freq === 'weekly') schedLabel = DOW_LABELS[d.pay_day_of_week] || '?';
 
             return `
-                <div class="debt-card">
-                    <div class="debt-header">
-                        <div class="debt-creditor">${d.creditor_name}</div>
-                        <span class="debt-badge ${d.status === 'paid_off' ? 'paid' : 'active'}">${d.status === 'paid_off' ? 'Pagada' : 'Activa'}</span>
+                <div class="card" style="margin-bottom:12px;${d.status === 'paid_off' ? 'opacity:0.6;' : ''}">
+                    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:15px;">${d.creditor_name}</div>
+                            <div style="font-size:12px;color:var(--text-muted);">${FREQ_LABELS[freq]} · ${schedLabel}${d.interest_rate ? ' · ' + d.interest_rate + '% interés' : ''}</div>
+                        </div>
+                        <span style="font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600;${d.status === 'paid_off' ? 'background:rgba(52,211,153,0.15);color:var(--accent-success);' : 'background:rgba(248,113,113,0.15);color:var(--accent-danger);'}">${d.status === 'paid_off' ? '✅ Pagada' : '🔴 Activa'}</span>
                     </div>
-                    <div class="debt-info">
-                        <div class="debt-info-item">
-                            <small>Saldo</small>
-                            <p style="color: var(--accent-danger);">${fmt(d.current_balance)}</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+                        <div style="text-align:center;background:var(--bg-input);border-radius:var(--radius-sm);padding:8px;">
+                            <div style="font-size:10px;color:var(--text-muted);">Saldo</div>
+                            <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--accent-danger);">${fmt(d.current_balance)}</div>
                         </div>
-                        <div class="debt-info-item">
-                            <small>Cuota</small>
-                            <p>${fmt(d.monthly_payment)}</p>
+                        <div style="text-align:center;background:var(--bg-input);border-radius:var(--radius-sm);padding:8px;">
+                            <div style="font-size:10px;color:var(--text-muted);">Cuota</div>
+                            <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${fmt(d.monthly_payment)}</div>
                         </div>
-                        <div class="debt-info-item">
-                            <small>Monto Original</small>
-                            <p>${fmt(d.original_amount)}</p>
-                        </div>
-                        <div class="debt-info-item">
-                            <small>Día de Pago</small>
-                            <p>${d.due_day || '-'}</p>
+                        <div style="text-align:center;background:var(--bg-input);border-radius:var(--radius-sm);padding:8px;">
+                            <div style="font-size:10px;color:var(--text-muted);">Original</div>
+                            <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${fmt(d.original_amount)}</div>
                         </div>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+                    ${daysUntil !== null && d.status === 'active' ? `
+                    <div style="background:${daysUntil <= 3 ? 'rgba(251,191,36,0.1)' : 'var(--bg-input)'};border:1px solid ${daysUntil <= 3 ? 'rgba(251,191,36,0.3)' : 'var(--border-color)'};border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:12px;color:var(--text-muted);">📅 Próximo pago</span>
+                        <span style="font-size:12px;font-weight:600;color:${daysUntil <= 0 ? 'var(--accent-danger)' : daysUntil <= 3 ? 'var(--accent-warning)' : 'var(--text-primary)'};">${daysUntil < 0 ? 'Vencido hace ' + Math.abs(daysUntil) + 'd' : daysUntil === 0 ? 'Hoy' : 'En ' + daysUntil + ' día' + (daysUntil > 1 ? 's' : '')}</span>
+                    </div>` : ''}
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;">
                             <span>Progreso</span>
-                            <span>${Math.round(progress)}%</span>
+                            <span>${Math.round(progress)}% pagado</span>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress}%; background: ${progressColor};"></div>
+                            <div class="progress-fill" style="width:${progress}%;background:${progressColor};"></div>
                         </div>
                     </div>
-                    ${d.status === 'active' ? `<button class="btn btn-sm btn-secondary" onclick="openDebtPaymentModal('${d.id}')">💰 Registrar Abono</button>` : ''}
+                    ${d.notes ? `<p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">📝 ${d.notes}</p>` : ''}
+                    <div style="display:flex;gap:8px;">
+                        ${d.status === 'active' ? `<button class="btn btn-primary" style="flex:1;font-size:12px;" onclick="openDebtPaymentModal('${d.id}')">💰 Abonar</button>` : ''}
+                        <button class="btn btn-secondary" style="flex:1;font-size:12px;" onclick="editDebt('${d.id}')">✏️ Editar</button>
+                        <button class="btn" style="font-size:12px;background:rgba(248,113,113,0.1);color:var(--accent-danger);border:1px solid rgba(248,113,113,0.2);" onclick="deleteDebt('${d.id}','${d.creditor_name}')">🗑️</button>
+                    </div>
                 </div>
             `;
         }).join('');
     }
 
+    function calcNextPaymentDate(d) {
+        const freq = d.payment_frequency || 'monthly';
+        const now = hnNow();
+        const today = new Date(todayStr() + 'T12:00:00');
+
+        if (freq === 'weekly') {
+            const dow = d.pay_day_of_week ?? 1;
+            const currentDow = now.getDay();
+            let daysAhead = dow - currentDow;
+            if (daysAhead <= 0) daysAhead += 7;
+            const next = new Date(today); next.setDate(next.getDate() + daysAhead);
+            return next;
+        }
+        if (freq === 'biweekly') {
+            const d1 = d.due_day || 15;
+            const d2 = d.pay_day_2 || 30;
+            const dom = now.getDate();
+            const m = now.getMonth();
+            const y = now.getFullYear();
+            const candidates = [new Date(y, m, d1), new Date(y, m, d2), new Date(y, m + 1, d1)];
+            return candidates.find(c => c >= today) || candidates[2];
+        }
+        // monthly
+        const dueDay = d.due_day || 15;
+        const m = now.getMonth();
+        const y = now.getFullYear();
+        const thisMonth = new Date(y, m, dueDay);
+        return thisMonth >= today ? thisMonth : new Date(y, m + 1, dueDay);
+    }
+
+    function toggleDebtPayDays() {
+        const freq = document.getElementById('debt-freq').value;
+        document.getElementById('debt-monthly-days').style.display = freq === 'monthly' ? 'block' : 'none';
+        document.getElementById('debt-biweekly-days').style.display = freq === 'biweekly' ? 'flex' : 'none';
+        document.getElementById('debt-weekly-day').style.display = freq === 'weekly' ? 'block' : 'none';
+    }
+
     function openDebtModal() {
+        document.getElementById('debt-edit-id').value = '';
+        document.getElementById('debt-modal-title').textContent = 'Nueva Deuda';
         document.getElementById('debt-creditor').value = '';
         document.getElementById('debt-original').value = '';
         document.getElementById('debt-balance').value = '';
         document.getElementById('debt-interest').value = '';
         document.getElementById('debt-payment').value = '';
         document.getElementById('debt-due-day').value = '';
+        document.getElementById('debt-day1').value = '15';
+        document.getElementById('debt-day2').value = '30';
+        document.getElementById('debt-dow').value = '1';
+        document.getElementById('debt-freq').value = 'monthly';
+        document.getElementById('debt-notes').value = '';
+        toggleDebtPayDays();
+        openModal('modal-debt');
+    }
+
+    function editDebt(id) {
+        const d = debts.find(x => x.id === id);
+        if (!d) return;
+        document.getElementById('debt-edit-id').value = d.id;
+        document.getElementById('debt-modal-title').textContent = '✏️ Editar Deuda';
+        document.getElementById('debt-creditor').value = d.creditor_name || '';
+        document.getElementById('debt-original').value = d.original_amount || '';
+        document.getElementById('debt-balance').value = d.current_balance || '';
+        document.getElementById('debt-interest').value = d.interest_rate || '';
+        document.getElementById('debt-payment').value = d.monthly_payment || '';
+        document.getElementById('debt-freq').value = d.payment_frequency || 'monthly';
+        document.getElementById('debt-due-day').value = d.due_day || '';
+        document.getElementById('debt-day1').value = d.due_day || '15';
+        document.getElementById('debt-day2').value = d.pay_day_2 || '30';
+        document.getElementById('debt-dow').value = d.pay_day_of_week ?? '1';
+        document.getElementById('debt-notes').value = d.notes || '';
+        toggleDebtPayDays();
         openModal('modal-debt');
     }
 
     async function saveDebt() {
+        const id = document.getElementById('debt-edit-id').value;
         const creditor = document.getElementById('debt-creditor').value.trim();
         const original = parseFloat(document.getElementById('debt-original').value);
         const balance = parseFloat(document.getElementById('debt-balance').value);
         const interest = parseFloat(document.getElementById('debt-interest').value) || 0;
         const payment = parseFloat(document.getElementById('debt-payment').value) || 0;
-        const dueDay = parseInt(document.getElementById('debt-due-day').value) || 15;
+        const freq = document.getElementById('debt-freq').value;
 
         if (!creditor || !original || !balance) return showToast('Completa los campos requeridos', 'error');
 
-        const { error } = await supabaseClient.from('debts').insert({
+        const data = {
             user_id: currentUser.id,
             creditor_name: creditor,
             original_amount: original,
             current_balance: balance,
             interest_rate: interest,
             monthly_payment: payment,
-            due_day: dueDay,
-            status: 'active'
-        });
+            payment_frequency: freq,
+            due_day: parseInt(document.getElementById(freq === 'biweekly' ? 'debt-day1' : 'debt-due-day').value) || 15,
+            pay_day_2: freq === 'biweekly' ? (parseInt(document.getElementById('debt-day2').value) || 30) : null,
+            pay_day_of_week: freq === 'weekly' ? (parseInt(document.getElementById('debt-dow').value) ?? 1) : null,
+            notes: document.getElementById('debt-notes').value.trim() || null,
+            status: balance <= 0 ? 'paid_off' : 'active'
+        };
 
-        if (error) return showToast('Error: ' + error.message, 'error');
+        let result;
+        if (id) {
+            result = await supabaseClient.from('debts').update(data).eq('id', id);
+        } else {
+            result = await supabaseClient.from('debts').insert(data);
+        }
+        // Fallback if new columns don't exist yet
+        if (result.error && (result.error.message.includes('payment_frequency') || result.error.message.includes('pay_day'))) {
+            delete data.payment_frequency;
+            delete data.pay_day_2;
+            delete data.pay_day_of_week;
+            delete data.notes;
+            result = id
+                ? await supabaseClient.from('debts').update(data).eq('id', id)
+                : await supabaseClient.from('debts').insert(data);
+        }
+        if (result.error) return showToast('Error: ' + result.error.message, 'error');
+
         closeModal('modal-debt');
-        showToast('Deuda registrada');
+        showToast(id ? '✅ Deuda actualizada' : '📋 Deuda registrada');
+        await loadDebts();
+        renderDebtsPage();
+    }
+
+    async function deleteDebt(id, name) {
+        if (!confirm(`¿Eliminar la deuda "${name}"? Esta acción no se puede deshacer.`)) return;
+        const { error } = await supabaseClient.from('debts').delete().eq('id', id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+        showToast('🗑️ Deuda eliminada');
         await loadDebts();
         renderDebtsPage();
     }
