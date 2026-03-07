@@ -1678,6 +1678,12 @@
                     </div>
                 </div>
 
+                <!-- === VEHICLES PAGE === -->
+                <div id="page-vehicles" class="page">
+                    <div id="vehicles-list"></div>
+                    <button class="btn btn-primary" style="margin-top:16px;" onclick="openVehicleModal()">🚗 Agregar Vehículo</button>
+                </div>
+
                 <!-- === REPORTS PAGE === -->
                 <div id="page-reports" class="page">
                     <div class="tabs">
@@ -1730,6 +1736,14 @@
                         <div class="settings-item" onclick="openCategoriesManager()">
                             <span>🏷️</span>
                             <p>Gestionar Categorías</p>
+                            <span style="color: var(--text-muted)">›</span>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <div class="settings-group-title">🚗 Vehículos</div>
+                        <div class="settings-item" onclick="navigateTo('vehicles')">
+                            <span>⛽</span>
+                            <p>Control de Combustible</p>
                             <span style="color: var(--text-muted)">›</span>
                         </div>
                     </div>
@@ -2150,6 +2164,164 @@
                         <button class="btn btn-secondary" onclick="cancelEditTransaction()">Cancelar</button>
                         <button class="btn btn-primary" onclick="saveEditTransaction()">💾 Guardar</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Modal -->
+        <div class="modal-overlay" id="modal-vehicle">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">🚗 Vehículo</h3>
+                <input type="hidden" id="veh-edit-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-input" id="veh-name" placeholder="Ej: Moto Honda">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" id="veh-type">
+                            <option value="moto">🏍️ Moto</option>
+                            <option value="car">🚗 Carro</option>
+                            <option value="truck">🛻 Camioneta</option>
+                            <option value="other">🚐 Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Placa</label>
+                        <input type="text" class="form-input" id="veh-plate" placeholder="Ej: AAA-0000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Combustible</label>
+                        <select class="form-select" id="veh-fuel-type">
+                            <option value="regular">Regular</option>
+                            <option value="premium">Premium</option>
+                            <option value="diesel">Diesel</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Marca</label>
+                        <input type="text" class="form-input" id="veh-brand" placeholder="Honda, Toyota...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Modelo / Año</label>
+                        <input type="text" class="form-input" id="veh-model" placeholder="CGL 150 / 2022">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tanque (litros)</label>
+                        <input type="number" class="form-input" id="veh-tank" step="0.1" placeholder="12">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kilometraje actual</label>
+                        <input type="number" class="form-input" id="veh-odo" step="0.1" inputmode="decimal" placeholder="15000">
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 0;">
+                    <label class="toggle"><input type="checkbox" id="veh-tracking"><span class="toggle-slider"></span></label>
+                    <div>
+                        <span style="font-size:13px;font-weight:500;">📍 Rastreo diario de km</span>
+                        <div style="font-size:11px;color:var(--text-muted);">Registra kilometraje mañana/tarde para control de trabajo</div>
+                    </div>
+                </div>
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-vehicle')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveVehicle()">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fuel Log Modal -->
+        <div class="modal-overlay" id="modal-fuel">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">⛽ Cargar Combustible</h3>
+                <div class="form-group">
+                    <label class="form-label">Vehículo</label>
+                    <select class="form-select" id="fuel-vehicle"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kilometraje actual</label>
+                    <input type="number" class="form-input" id="fuel-odo" step="0.1" inputmode="decimal" placeholder="Odómetro en km">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Litros</label>
+                        <input type="number" class="form-input" id="fuel-liters" step="0.001" inputmode="decimal" placeholder="0.000" oninput="calcFuelTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Precio/litro</label>
+                        <input type="number" class="form-input" id="fuel-price" step="0.01" inputmode="decimal" placeholder="0.00" oninput="calcFuelTotal()">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Total</label>
+                    <input type="number" class="form-input" id="fuel-total" step="0.01" inputmode="decimal" placeholder="0.00" oninput="calcFuelLiters()">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" class="form-input" id="fuel-date">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:20px;">
+                        <label class="toggle"><input type="checkbox" id="fuel-full" checked><span class="toggle-slider"></span></label>
+                        <span style="font-size:13px;">Tanque lleno</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gasolinera (opcional)</label>
+                    <input type="text" class="form-input" id="fuel-station" placeholder="Ej: DIPPSA La Lima">
+                </div>
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-fuel')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveFuelLog()">⛽ Registrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Odometer Log Modal -->
+        <div class="modal-overlay" id="modal-odometer">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">📍 Registrar Kilometraje</h3>
+                <input type="hidden" id="odo-vehicle-id">
+                <div class="form-group">
+                    <label class="form-label">Kilometraje actual</label>
+                    <input type="number" class="form-input" id="odo-km" step="0.1" inputmode="decimal" placeholder="Odómetro en km" style="font-size:20px;text-align:center;font-weight:700;">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Momento</label>
+                        <select class="form-select" id="odo-period">
+                            <option value="morning">🌅 Mañana (salida)</option>
+                            <option value="evening">🌆 Tarde (regreso)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" id="odo-trip-type">
+                            <option value="work">💼 Trabajo</option>
+                            <option value="personal">🏠 Personal</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha</label>
+                    <input type="date" class="form-input" id="odo-date">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nota (opcional)</label>
+                    <input type="text" class="form-input" id="odo-notes" placeholder="Ej: Viaje a SPS, ruta extra...">
+                </div>
+                <div class="form-row" style="margin-top:8px;">
+                    <button class="btn btn-secondary" onclick="closeModal('modal-odometer')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="saveOdometerLog()">📍 Registrar</button>
                 </div>
             </div>
         </div>
@@ -2840,6 +3012,7 @@
         else if (page === 'budgets') renderBudgetsPage();
         else if (page === 'reports') renderReports();
         else if (page === 'advisor') renderAdvisorPage();
+        else if (page === 'vehicles') renderVehiclesPage();
         else if (page === 'family') renderFamilyPage();
     }
 
@@ -2938,7 +3111,10 @@
             loadFamilyData(),
             loadRecurring(),
             loadScheduledPayments(),
-            loadStreak()
+            loadStreak(),
+            loadVehicles(),
+            loadFuelLogs(),
+            loadOdometerLogs()
         ]);
         await processRecurringTransactions();
         await updateStreak();
@@ -3002,7 +3178,7 @@
         const titles = {
             dashboard: 'Dashboard', accounts: 'Mis Cuentas', transactions: 'Movimientos',
             debts: 'Deudas', budgets: 'Presupuestos', reports: 'Reportes', settings: 'Configuración',
-            family: '👨‍👩‍👧‍👦 Familia', advisor: '🧠 Asesor Financiero'
+            family: '👨‍👩‍👧‍👦 Familia', advisor: '🧠 Asesor Financiero', vehicles: '🚗 Vehículos'
         };
         document.getElementById('page-title').textContent = titles[page] || 'Mayordomía';
 
@@ -3014,6 +3190,7 @@
         else if (page === 'budgets') renderBudgetsPage();
         else if (page === 'reports') renderReports();
         else if (page === 'advisor') renderAdvisorPage();
+        else if (page === 'vehicles') renderVehiclesPage();
         else if (page === 'family') { loadFamilyData().then(() => renderFamilyPage()); }
     }
 
@@ -4317,6 +4494,481 @@
                 📤 Exportar Movimientos
             </button>
         `;
+    }
+
+    // ========================
+    // VEHICLES & FUEL TRACKING
+    // ========================
+    let vehicles = [];
+    let fuelLogs = [];
+
+    async function loadVehicles() {
+        try {
+            const { data, error } = await supabaseClient.from('vehicles').select('*')
+                .eq('user_id', currentUser.id).eq('is_active', true).order('created_at');
+            vehicles = error ? [] : (data || []);
+        } catch(e) { vehicles = []; }
+    }
+
+    async function loadFuelLogs() {
+        try {
+            const { data, error } = await supabaseClient.from('fuel_logs').select('*, vehicles(name, type)')
+                .eq('user_id', currentUser.id).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(500);
+            fuelLogs = error ? [] : (data || []);
+        } catch(e) { fuelLogs = []; }
+    }
+
+    const VEH_ICONS = { moto: '🏍️', car: '🚗', truck: '🛻', other: '🚐' };
+
+    function renderVehiclesPage() {
+        const container = document.getElementById('vehicles-list');
+        if (vehicles.length === 0) {
+            container.innerHTML = '<div class="empty-state" style="padding-top:30px;"><span>🚗</span><p>Agrega tu primer vehículo para empezar a rastrear combustible</p></div>';
+            return;
+        }
+
+        container.innerHTML = vehicles.map(v => {
+            const logs = fuelLogs.filter(f => f.vehicle_id === v.id);
+            const stats = calcVehicleStats(v, logs);
+            const { start: ms, end: me } = getMonthRange();
+            const monthCost = logs.filter(f => f.date >= ms && f.date <= me).reduce((s,f) => s + parseFloat(f.total_cost), 0);
+            const tank = calcTankStatus(v, fuelLogs);
+            const odoStats = v.daily_tracking ? calcOdometerStats(v.id) : null;
+
+            // Tank gauge colors
+            const tankColor = tank ? (tank.pctRemaining > 40 ? '#34d399' : tank.pctRemaining > 15 ? '#fbbf24' : '#f87171') : '#555';
+
+            return `
+                <div class="card" style="margin-bottom:16px;">
+                    <!-- Vehicle Header -->
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                        <div style="font-size:36px;">${VEH_ICONS[v.type]}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;font-size:16px;">${v.name}</div>
+                            <div style="font-size:12px;color:var(--text-muted);">${v.brand || ''} ${v.model || ''} ${v.plate ? '· ' + v.plate : ''}</div>
+                        </div>
+                        <button onclick="editVehicle('${v.id}')" style="background:none;border:none;color:var(--accent-primary);font-size:16px;cursor:pointer;">✏️</button>
+                    </div>
+
+                    ${tank ? `
+                    <!-- Tank Gauge -->
+                    <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                            <span style="font-size:24px;">⛽</span>
+                            <div style="flex:1;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                    <span style="font-size:12px;color:var(--text-muted);">Nivel del tanque</span>
+                                    <span style="font-size:13px;font-weight:700;color:${tankColor};">${Math.round(tank.pctRemaining)}%</span>
+                                </div>
+                                <div style="height:12px;background:rgba(255,255,255,0.05);border-radius:6px;overflow:hidden;border:1px solid var(--border-color);">
+                                    <div style="height:100%;width:${tank.pctRemaining}%;background:${tankColor};border-radius:6px;transition:width 0.5s;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:10px;color:var(--text-muted);">Quedan</div>
+                                <div style="font-family:var(--font-mono);font-weight:700;font-size:13px;">${tank.litersRemaining.toFixed(1)}L</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:10px;color:var(--text-muted);">Para llenar</div>
+                                <div style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--accent-danger);">${fmt(tank.costToFill)}</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:10px;color:var(--text-muted);">Autonomía</div>
+                                <div style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--accent-primary);">${Math.round(tank.kmRemaining)} km</div>
+                            </div>
+                        </div>
+                    </div>` : (v.tank_capacity ? `
+                    <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;text-align:center;">
+                        <p style="font-size:12px;color:var(--text-muted);">⛽ Registra al menos 2 cargas con tanque lleno para ver el medidor</p>
+                    </div>` : '')}
+
+                    <!-- Key Metrics -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+                        <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;text-align:center;">
+                            <div style="font-size:11px;color:var(--text-muted);">Km/Litro</div>
+                            <div style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent-primary);">${stats.kmPerLiter > 0 ? stats.kmPerLiter.toFixed(1) : '--'}</div>
+                        </div>
+                        <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;text-align:center;">
+                            <div style="font-size:11px;color:var(--text-muted);">L/Km</div>
+                            <div style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent-warning);">${stats.costPerKm > 0 ? fmt(stats.costPerKm) : '--'}</div>
+                        </div>
+                        <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;text-align:center;">
+                            <div style="font-size:11px;color:var(--text-muted);">Este mes</div>
+                            <div style="font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--accent-danger);">${fmt(monthCost)}</div>
+                        </div>
+                    </div>
+
+                    ${v.daily_tracking ? `
+                    <!-- Daily Tracking Section -->
+                    <div style="background:linear-gradient(135deg,rgba(34,211,238,0.06),rgba(168,85,247,0.06));border:1px solid rgba(34,211,238,0.12);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                            <span style="font-size:14px;font-weight:600;">📍 Rastreo Diario</span>
+                            <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="openOdometerModal('${v.id}')">Registrar km</button>
+                        </div>
+                        ${odoStats && odoStats.daysTracked > 0 ? `
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+                            <div style="background:rgba(0,0,0,0.2);border-radius:var(--radius-sm);padding:8px;text-align:center;">
+                                <div style="font-size:10px;color:var(--text-muted);">💼 Trabajo</div>
+                                <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${Math.round(odoStats.totalWork)} km</div>
+                                ${stats.costPerKm > 0 ? `<div style="font-size:10px;color:var(--accent-danger);">${fmt(odoStats.totalWork * stats.costPerKm)}</div>` : ''}
+                            </div>
+                            <div style="background:rgba(0,0,0,0.2);border-radius:var(--radius-sm);padding:8px;text-align:center;">
+                                <div style="font-size:10px;color:var(--text-muted);">🏠 Personal</div>
+                                <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${Math.round(odoStats.totalPersonal)} km</div>
+                                ${stats.costPerKm > 0 ? `<div style="font-size:10px;color:var(--accent-danger);">${fmt(odoStats.totalPersonal * stats.costPerKm)}</div>` : ''}
+                            </div>
+                            <div style="background:rgba(0,0,0,0.2);border-radius:var(--radius-sm);padding:8px;text-align:center;">
+                                <div style="font-size:10px;color:var(--text-muted);">Prom/día</div>
+                                <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${odoStats.avgDailyKm.toFixed(1)} km</div>
+                                ${stats.costPerKm > 0 ? `<div style="font-size:10px;color:var(--accent-danger);">${fmt(odoStats.avgDailyKm * stats.costPerKm)}/día</div>` : ''}
+                            </div>
+                        </div>
+                        <!-- Last 7 days mini chart -->
+                        <div style="display:flex;align-items:flex-end;gap:3px;height:50px;margin-bottom:4px;">
+                            ${odoStats.last7.reverse().map(d => {
+                                const maxKm = Math.max(...odoStats.last7.map(x => x.km), 1);
+                                const h = d.km > 0 ? Math.max(8, (d.km / maxKm) * 50) : 4;
+                                const c = d.type === 'work' ? 'var(--accent-primary)' : d.type === 'personal' ? 'var(--accent-success)' : 'var(--border-color)';
+                                return `<div style="flex:1;height:${h}px;background:${c};border-radius:3px 3px 0 0;opacity:${d.km>0?1:0.3};" title="${d.date}: ${Math.round(d.km)} km"></div>`;
+                            }).join('')}
+                        </div>
+                        <div style="display:flex;gap:3px;">
+                            ${odoStats.last7.map(d => `<div style="flex:1;text-align:center;font-size:9px;color:var(--text-muted);">${new Date(d.date+'T12:00:00').toLocaleDateString('es',{weekday:'narrow'})}</div>`).join('')}
+                        </div>
+                        <div style="display:flex;gap:12px;justify-content:center;margin-top:8px;">
+                            <span style="font-size:10px;color:var(--text-muted);">🔵 Trabajo</span>
+                            <span style="font-size:10px;color:var(--text-muted);">🟢 Personal</span>
+                        </div>
+                        ` : `<p style="font-size:12px;color:var(--text-muted);text-align:center;">Registra km por mañana y tarde para ver el desglose</p>`}
+                    </div>` : ''}
+
+                    <!-- Extended Stats -->
+                    <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:12px;color:var(--text-muted);">Kilometraje</span>
+                            <span style="font-size:12px;font-weight:600;">${Number(v.current_odometer || 0).toLocaleString()} km</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:12px;color:var(--text-muted);">Precio prom. combustible</span>
+                            <span style="font-size:12px;font-weight:600;">${stats.avgPricePerLiter > 0 ? fmt(stats.avgPricePerLiter) + '/L' : '--'}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:12px;color:var(--text-muted);">Total cargas</span>
+                            <span style="font-size:12px;font-weight:600;">${logs.length}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:12px;color:var(--text-muted);">Total gastado</span>
+                            <span style="font-size:12px;font-weight:600;color:var(--accent-danger);">${fmt(stats.totalSpent)}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="font-size:12px;color:var(--text-muted);">Km recorridos rastreados</span>
+                            <span style="font-size:12px;font-weight:600;">${stats.totalKm > 0 ? Number(stats.totalKm.toFixed(0)).toLocaleString() + ' km' : '--'}</span>
+                        </div>
+                    </div>
+
+                    <!-- Fuel History -->
+                    ${logs.length > 0 ? `
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Últimas cargas</div>
+                        ${logs.slice(0, 5).map((f, i) => {
+                            const prev = logs[i + 1];
+                            const kmDriven = prev ? (parseFloat(f.odometer) - parseFloat(prev.odometer)) : 0;
+                            const efficiency = kmDriven > 0 && f.full_tank ? (kmDriven / parseFloat(f.liters)).toFixed(1) : '';
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:12px;">
+                                <span style="color:var(--text-muted);min-width:60px;">${formatDateHN(f.date)}</span>
+                                <span style="flex:1;">${parseFloat(f.liters).toFixed(1)}L · ${fmt(f.price_per_liter)}/L${f.station ? ' · ' + f.station : ''}</span>
+                                <span style="font-family:var(--font-mono);font-weight:600;">${fmt(f.total_cost)}</span>
+                                ${efficiency ? `<span style="font-size:10px;color:var(--accent-primary);min-width:45px;text-align:right;">${efficiency} km/L</span>` : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>` : ''}
+
+                    <!-- Action Buttons -->
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary" style="flex:1;" onclick="openFuelLogModal('${v.id}')">⛽ Cargar</button>
+                        ${v.daily_tracking ? `<button class="btn btn-secondary" style="flex:1;" onclick="openOdometerModal('${v.id}')">📍 Km</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function calcVehicleStats(vehicle, logs) {
+        if (logs.length === 0) return { kmPerLiter: 0, costPerKm: 0, avgPricePerLiter: 0, totalSpent: 0, totalKm: 0 };
+
+        const totalSpent = logs.reduce((s, f) => s + parseFloat(f.total_cost), 0);
+        const totalLiters = logs.reduce((s, f) => s + parseFloat(f.liters), 0);
+        const avgPricePerLiter = totalLiters > 0 ? totalSpent / totalLiters : 0;
+
+        // Calculate km/L from consecutive full-tank fills
+        let totalKmTracked = 0;
+        let totalLitersTracked = 0;
+        for (let i = 0; i < logs.length - 1; i++) {
+            const current = logs[i];
+            const prev = logs[i + 1];
+            const kmDriven = parseFloat(current.odometer) - parseFloat(prev.odometer);
+            if (kmDriven > 0 && current.full_tank) {
+                totalKmTracked += kmDriven;
+                totalLitersTracked += parseFloat(current.liters);
+            }
+        }
+        const kmPerLiter = totalLitersTracked > 0 ? totalKmTracked / totalLitersTracked : 0;
+        const costPerKm = kmPerLiter > 0 ? avgPricePerLiter / kmPerLiter : 0;
+
+        // Total km from first to last log
+        const sortedByOdo = [...logs].sort((a, b) => parseFloat(a.odometer) - parseFloat(b.odometer));
+        const totalKm = sortedByOdo.length >= 2 ? parseFloat(sortedByOdo[sortedByOdo.length - 1].odometer) - parseFloat(sortedByOdo[0].odometer) : 0;
+
+        return { kmPerLiter, costPerKm, avgPricePerLiter, totalSpent, totalKm };
+    }
+
+    // --- VEHICLE CRUD ---
+    function openVehicleModal() {
+        document.getElementById('veh-edit-id').value = '';
+        document.getElementById('veh-name').value = '';
+        document.getElementById('veh-type').value = 'moto';
+        document.getElementById('veh-plate').value = '';
+        document.getElementById('veh-fuel-type').value = 'regular';
+        document.getElementById('veh-brand').value = '';
+        document.getElementById('veh-model').value = '';
+        document.getElementById('veh-tank').value = '';
+        document.getElementById('veh-odo').value = '';
+        document.getElementById('veh-tracking').checked = false;
+        openModal('modal-vehicle');
+    }
+
+    function editVehicle(id) {
+        const v = vehicles.find(x => x.id === id);
+        if (!v) return;
+        openVehicleModal();
+        document.getElementById('veh-edit-id').value = v.id;
+        document.getElementById('veh-name').value = v.name;
+        document.getElementById('veh-type').value = v.type;
+        document.getElementById('veh-plate').value = v.plate || '';
+        document.getElementById('veh-fuel-type').value = v.fuel_type || 'regular';
+        document.getElementById('veh-brand').value = v.brand || '';
+        document.getElementById('veh-model').value = v.model || '';
+        document.getElementById('veh-tank').value = v.tank_capacity || '';
+        document.getElementById('veh-odo').value = v.current_odometer || '';
+        document.getElementById('veh-tracking').checked = v.daily_tracking || false;
+    }
+
+    async function saveVehicle() {
+        const id = document.getElementById('veh-edit-id').value;
+        const name = document.getElementById('veh-name').value.trim();
+        if (!name) return showToast('Ingresa un nombre', 'error');
+        const data = {
+            user_id: currentUser.id,
+            name,
+            type: document.getElementById('veh-type').value,
+            plate: document.getElementById('veh-plate').value.trim().toUpperCase() || null,
+            fuel_type: document.getElementById('veh-fuel-type').value,
+            brand: document.getElementById('veh-brand').value.trim() || null,
+            model: document.getElementById('veh-model').value.trim() || null,
+            tank_capacity: parseFloat(document.getElementById('veh-tank').value) || null,
+            current_odometer: parseFloat(document.getElementById('veh-odo').value) || 0,
+            daily_tracking: document.getElementById('veh-tracking').checked,
+        };
+        const { error } = id
+            ? await supabaseClient.from('vehicles').update(data).eq('id', id)
+            : await supabaseClient.from('vehicles').insert(data);
+        if (error) return showToast('Error: ' + error.message, 'error');
+        closeModal('modal-vehicle');
+        showToast(id ? '✅ Vehículo actualizado' : '🚗 Vehículo agregado');
+        await loadVehicles();
+        renderVehiclesPage();
+    }
+
+    // --- ODOMETER DAILY TRACKING ---
+    let odometerLogs = [];
+
+    async function loadOdometerLogs() {
+        try {
+            const { data, error } = await supabaseClient.from('odometer_logs').select('*')
+                .eq('user_id', currentUser.id).order('date', { ascending: false }).order('period', { ascending: false }).limit(500);
+            odometerLogs = error ? [] : (data || []);
+        } catch(e) { odometerLogs = []; }
+    }
+
+    function openOdometerModal(vehicleId) {
+        const v = vehicles.find(x => x.id === vehicleId);
+        document.getElementById('odo-vehicle-id').value = vehicleId;
+        document.getElementById('odo-km').value = v?.current_odometer || '';
+        document.getElementById('odo-date').value = todayStr();
+        document.getElementById('odo-notes').value = '';
+        // Auto-detect period: before noon = morning, after = evening
+        const hour = hnNow().getHours();
+        document.getElementById('odo-period').value = hour < 13 ? 'morning' : 'evening';
+        document.getElementById('odo-trip-type').value = 'work';
+        openModal('modal-odometer');
+    }
+
+    async function saveOdometerLog() {
+        const vehicleId = document.getElementById('odo-vehicle-id').value;
+        const odometer = parseFloat(document.getElementById('odo-km').value);
+        const period = document.getElementById('odo-period').value;
+        const date = document.getElementById('odo-date').value || todayStr();
+        if (!odometer || odometer <= 0) return showToast('Ingresa el kilometraje', 'error');
+
+        const { error } = await supabaseClient.from('odometer_logs').upsert({
+            user_id: currentUser.id,
+            vehicle_id: vehicleId,
+            date, period, odometer,
+            trip_type: document.getElementById('odo-trip-type').value,
+            notes: document.getElementById('odo-notes').value.trim() || null,
+        }, { onConflict: 'vehicle_id,date,period' });
+        if (error) return showToast('Error: ' + error.message, 'error');
+
+        // Update vehicle odometer
+        await supabaseClient.from('vehicles').update({ current_odometer: odometer }).eq('id', vehicleId);
+        const v = vehicles.find(x => x.id === vehicleId);
+        if (v) v.current_odometer = odometer;
+
+        closeModal('modal-odometer');
+        showToast('📍 Kilometraje registrado');
+        await loadOdometerLogs();
+        renderVehiclesPage();
+    }
+
+    function calcTankStatus(vehicle, logs) {
+        if (!vehicle.tank_capacity || logs.length === 0) return null;
+        // Find last full-tank fill
+        const vLogs = logs.filter(f => f.vehicle_id === vehicle.id);
+        const lastFull = vLogs.find(f => f.full_tank);
+        if (!lastFull) return null;
+
+        const stats = calcVehicleStats(vehicle, vLogs);
+        if (stats.kmPerLiter <= 0) return null;
+
+        const kmSinceFill = parseFloat(vehicle.current_odometer) - parseFloat(lastFull.odometer);
+        if (kmSinceFill < 0) return null;
+
+        const litersBurned = kmSinceFill / stats.kmPerLiter;
+        const litersRemaining = Math.max(0, parseFloat(vehicle.tank_capacity) - litersBurned);
+        const pctRemaining = Math.max(0, Math.min(100, (litersRemaining / vehicle.tank_capacity) * 100));
+        const litersToFill = vehicle.tank_capacity - litersRemaining;
+        const costToFill = litersToFill * stats.avgPricePerLiter;
+        const kmRemaining = litersRemaining * stats.kmPerLiter;
+
+        return { pctRemaining, litersRemaining, litersToFill, costToFill, kmRemaining, kmSinceFill };
+    }
+
+    function calcOdometerStats(vehicleId) {
+        const vLogs = odometerLogs.filter(l => l.vehicle_id === vehicleId);
+        const { start: ms, end: me } = getMonthRange();
+        const monthLogs = vLogs.filter(l => l.date >= ms && l.date <= me);
+
+        // Group by date to calculate daily km
+        const days = {};
+        monthLogs.forEach(l => {
+            if (!days[l.date]) days[l.date] = {};
+            days[l.date][l.period] = { odometer: parseFloat(l.odometer), trip_type: l.trip_type };
+        });
+
+        let totalWork = 0, totalPersonal = 0, daysTracked = 0;
+        const dailyDetails = [];
+
+        Object.entries(days).sort((a,b) => b[0].localeCompare(a[0])).forEach(([date, periods]) => {
+            if (periods.morning && periods.evening) {
+                const km = Math.max(0, periods.evening.odometer - periods.morning.odometer);
+                const type = periods.morning.trip_type || 'work';
+                if (type === 'work') totalWork += km; else totalPersonal += km;
+                daysTracked++;
+                dailyDetails.push({ date, km, type });
+            }
+        });
+
+        // Also include all entries for a 7-day view
+        const last7 = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(hnNow()); d.setDate(d.getDate() - i);
+            const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const dayData = days[ds];
+            if (dayData && dayData.morning && dayData.evening) {
+                last7.push({ date: ds, km: Math.max(0, dayData.evening.odometer - dayData.morning.odometer), type: dayData.morning.trip_type });
+            } else {
+                last7.push({ date: ds, km: 0, type: null });
+            }
+        }
+
+        const avgDailyKm = daysTracked > 0 ? (totalWork + totalPersonal) / daysTracked : 0;
+
+        return { totalWork, totalPersonal, daysTracked, dailyDetails, last7, avgDailyKm };
+    }
+
+    // --- FUEL LOG ---
+    function openFuelLogModal(vehicleId) {
+        document.getElementById('fuel-vehicle').innerHTML = vehicles.map(v =>
+            `<option value="${v.id}" ${v.id === vehicleId ? 'selected' : ''}>${VEH_ICONS[v.type]} ${v.name}</option>`
+        ).join('');
+        // Pre-fill odometer from last log or vehicle
+        const veh = vehicles.find(v => v.id === vehicleId);
+        document.getElementById('fuel-odo').value = veh?.current_odometer || '';
+        document.getElementById('fuel-liters').value = '';
+        document.getElementById('fuel-price').value = '';
+        document.getElementById('fuel-total').value = '';
+        document.getElementById('fuel-date').value = todayStr();
+        document.getElementById('fuel-full').checked = true;
+        document.getElementById('fuel-station').value = '';
+
+        // Pre-fill last price
+        const lastLog = fuelLogs.find(f => f.vehicle_id === vehicleId);
+        if (lastLog) document.getElementById('fuel-price').value = lastLog.price_per_liter;
+
+        openModal('modal-fuel');
+    }
+
+    function calcFuelTotal() {
+        const liters = parseFloat(document.getElementById('fuel-liters').value) || 0;
+        const price = parseFloat(document.getElementById('fuel-price').value) || 0;
+        if (liters > 0 && price > 0) {
+            document.getElementById('fuel-total').value = (liters * price).toFixed(2);
+        }
+    }
+
+    function calcFuelLiters() {
+        const total = parseFloat(document.getElementById('fuel-total').value) || 0;
+        const price = parseFloat(document.getElementById('fuel-price').value) || 0;
+        if (total > 0 && price > 0) {
+            document.getElementById('fuel-liters').value = (total / price).toFixed(3);
+        }
+    }
+
+    async function saveFuelLog() {
+        const vehicleId = document.getElementById('fuel-vehicle').value;
+        const odometer = parseFloat(document.getElementById('fuel-odo').value);
+        const liters = parseFloat(document.getElementById('fuel-liters').value);
+        const pricePerLiter = parseFloat(document.getElementById('fuel-price').value);
+        const totalCost = parseFloat(document.getElementById('fuel-total').value);
+        const date = document.getElementById('fuel-date').value;
+
+        if (!vehicleId) return showToast('Selecciona un vehículo', 'error');
+        if (!odometer || odometer <= 0) return showToast('Ingresa el kilometraje', 'error');
+        if (!liters || liters <= 0) return showToast('Ingresa los litros', 'error');
+        if (!pricePerLiter || pricePerLiter <= 0) return showToast('Ingresa el precio por litro', 'error');
+
+        const { error } = await supabaseClient.from('fuel_logs').insert({
+            user_id: currentUser.id,
+            vehicle_id: vehicleId,
+            date: date || todayStr(),
+            odometer,
+            liters,
+            price_per_liter: pricePerLiter,
+            total_cost: totalCost || (liters * pricePerLiter),
+            full_tank: document.getElementById('fuel-full').checked,
+            station: document.getElementById('fuel-station').value.trim() || null,
+        });
+        if (error) return showToast('Error: ' + error.message, 'error');
+
+        // Update vehicle odometer
+        await supabaseClient.from('vehicles').update({ current_odometer: odometer }).eq('id', vehicleId);
+
+        closeModal('modal-fuel');
+        showToast('⛽ Carga registrada');
+        await Promise.all([loadVehicles(), loadFuelLogs()]);
+        renderVehiclesPage();
     }
 
     // ========================
