@@ -4771,10 +4771,17 @@
             current_odometer: parseFloat(document.getElementById('veh-odo').value) || 0,
             daily_tracking: document.getElementById('veh-tracking').checked,
         };
-        const { error } = id
+        let result = id
             ? await supabaseClient.from('vehicles').update(data).eq('id', id)
             : await supabaseClient.from('vehicles').insert(data);
-        if (error) return showToast('Error: ' + error.message, 'error');
+        // If daily_tracking column doesn't exist yet, retry without it
+        if (result.error && result.error.message.includes('daily_tracking')) {
+            delete data.daily_tracking;
+            result = id
+                ? await supabaseClient.from('vehicles').update(data).eq('id', id)
+                : await supabaseClient.from('vehicles').insert(data);
+        }
+        if (result.error) return showToast('Error: ' + result.error.message, 'error');
         closeModal('modal-vehicle');
         showToast(id ? '✅ Vehículo actualizado' : '🚗 Vehículo agregado');
         await loadVehicles();
