@@ -2405,23 +2405,17 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Momento</label>
-                        <select class="form-select" id="odo-period">
-                            <option value="morning">🌅 Mañana (salida)</option>
-                            <option value="evening">🌆 Tarde (regreso)</option>
+                        <select class="form-select" id="odo-period" onchange="updateOdoHint()">
+                            <option value="morning">🌅 Llegada al trabajo</option>
+                            <option value="evening">🌆 Salida del trabajo</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Tipo</label>
-                        <select class="form-select" id="odo-trip-type">
-                            <option value="work">💼 Trabajo</option>
-                            <option value="personal">🏠 Personal</option>
-                        </select>
+                        <label class="form-label">Fecha</label>
+                        <input type="date" class="form-input" id="odo-date">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Fecha</label>
-                    <input type="date" class="form-input" id="odo-date">
-                </div>
+                <div id="odo-hint" style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;font-size:12px;color:var(--text-muted);"></div>
                 <div class="form-group">
                     <label class="form-label">Nota (opcional)</label>
                     <input type="text" class="form-input" id="odo-notes" placeholder="Ej: Viaje a SPS, ruta extra...">
@@ -4894,14 +4888,6 @@
             const odoStats = v.daily_tracking ? calcOdometerStats(v.id) : null;
             const tankColor = tank ? (tank.pctRemaining > 40 ? '#34d399' : tank.pctRemaining > 15 ? '#fbbf24' : '#f87171') : '#555';
 
-            // Odometer history for this vehicle
-            const vOdoLogs = odometerLogs.filter(l => l.vehicle_id === v.id);
-            const odoDays = {};
-            vOdoLogs.forEach(l => {
-                if (!odoDays[l.date]) odoDays[l.date] = {};
-                odoDays[l.date][l.period] = l;
-            });
-
             return `
                 <div class="card" style="margin-bottom:16px;">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
@@ -4964,23 +4950,40 @@
                                 ${stats.costPerKm > 0 ? `<div style="font-size:10px;color:var(--accent-danger);">${fmt(odoStats.avgDailyKm * stats.costPerKm)}/día</div>` : ''}
                             </div>
                         </div>
-                        <!-- Odometer History -->
+                        <!-- 7-day chart with stacked work/personal -->
+                        <div style="display:flex;align-items:flex-end;gap:3px;height:50px;margin-bottom:4px;">
+                            ${odoStats.last7.map(d => {
+                                const total = d.workKm + d.personalKm;
+                                const maxKm = Math.max(...odoStats.last7.map(x => x.workKm + x.personalKm), 1);
+                                const wH = total > 0 ? Math.max(2, (d.workKm / maxKm) * 50) : 0;
+                                const pH = total > 0 ? Math.max(2, (d.personalKm / maxKm) * 50) : 0;
+                                return `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:1px;">
+                                    ${d.personalKm > 0 ? `<div style="height:${pH}px;background:var(--accent-success);border-radius:3px 3px 0 0;opacity:0.8;" title="🏠 ${d.personalKm.toFixed(1)} km"></div>` : ''}
+                                    ${d.workKm > 0 ? `<div style="height:${wH}px;background:var(--accent-primary);border-radius:${d.personalKm>0?'0':'3px 3px'} 0 0;opacity:0.8;" title="💼 ${d.workKm.toFixed(1)} km"></div>` : ''}
+                                    ${total === 0 ? `<div style="height:4px;background:var(--border-color);border-radius:2px;opacity:0.3;"></div>` : ''}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        <div style="display:flex;gap:3px;margin-bottom:8px;">
+                            ${odoStats.last7.map(d => `<div style="flex:1;text-align:center;font-size:9px;color:var(--text-muted);">${new Date(d.date+'T12:00:00').toLocaleDateString('es',{weekday:'narrow'})}</div>`).join('')}
+                        </div>
+                        <div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px;">
+                            <span style="font-size:10px;color:var(--text-muted);">🔵 Trabajo</span>
+                            <span style="font-size:10px;color:var(--text-muted);">🟢 Personal</span>
+                        </div>
+                        <!-- Odometer History with work/personal split -->
                         <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Historial de Kilometraje</div>
-                        ${Object.entries(odoDays).sort((a,b) => b[0].localeCompare(a[0])).slice(0, 10).map(([date, periods]) => {
-                            const m = periods.morning;
-                            const e = periods.evening;
-                            const km = m && e ? Math.max(0, parseFloat(e.odometer) - parseFloat(m.odometer)) : null;
-                            const type = m?.trip_type || e?.trip_type || 'work';
-                            return `<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:11px;">
-                                <span style="min-width:55px;color:var(--text-muted);">${formatDateHN(date)}</span>
-                                <span style="color:${type==='work'?'var(--accent-primary)':'var(--accent-success)'};">${type==='work'?'💼':'🏠'}</span>
-                                <span style="min-width:40px;">${m ? '🌅'+parseFloat(m.odometer).toFixed(0) : '—'}</span>
-                                <span style="min-width:40px;">${e ? '🌆'+parseFloat(e.odometer).toFixed(0) : '—'}</span>
-                                <span style="flex:1;font-weight:700;text-align:right;">${km !== null ? km.toFixed(1)+' km' : '—'}</span>
-                                <button onclick="editOdoLog('${m?.id||''}','${e?.id||''}','${v.id}','${date}')" style="background:none;border:none;color:var(--accent-primary);font-size:12px;cursor:pointer;padding:2px;">✏️</button>
+                        ${odoStats.dailyDetails.slice(0, 10).map(d => {
+                            return `<div style="display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:11px;">
+                                <span style="min-width:50px;color:var(--text-muted);">${formatDateHN(d.date)}</span>
+                                <span style="min-width:32px;">🌅${d.morning ? parseFloat(d.morning.odometer).toFixed(0) : '—'}</span>
+                                <span style="min-width:32px;">🌆${d.evening ? parseFloat(d.evening.odometer).toFixed(0) : '—'}</span>
+                                <span style="color:var(--accent-primary);min-width:45px;font-weight:600;">💼${d.workKm.toFixed(1)}</span>
+                                <span style="color:var(--accent-success);min-width:45px;font-weight:600;">🏠${d.personalKm.toFixed(1)}</span>
+                                <button onclick="editOdoLog('${d.morning?.id||''}','${d.evening?.id||''}','${v.id}','${d.date}')" style="background:none;border:none;color:var(--accent-primary);font-size:12px;cursor:pointer;padding:2px;margin-left:auto;">✏️</button>
                             </div>`;
                         }).join('')}
-                        ` : `<p style="font-size:12px;color:var(--text-muted);text-align:center;">Registra km por mañana y tarde para ver el desglose</p>`}
+                        ` : `<p style="font-size:12px;color:var(--text-muted);text-align:center;">Registra km al llegar y al salir del trabajo</p>`}
                     </div>` : ''}
 
                     <!-- Fuel History -->
@@ -5063,33 +5066,62 @@
         const vLogs = odometerLogs.filter(l => l.vehicle_id === vehicleId);
         const { start: ms, end: me } = getMonthRange();
         const monthLogs = vLogs.filter(l => l.date >= ms && l.date <= me);
-        const days = {};
-        monthLogs.forEach(l => {
-            if (!days[l.date]) days[l.date] = {};
-            days[l.date][l.period] = { odometer: parseFloat(l.odometer), trip_type: l.trip_type };
+
+        // Build daily map
+        const allDays = {};
+        vLogs.forEach(l => {
+            if (!allDays[l.date]) allDays[l.date] = {};
+            allDays[l.date][l.period] = { odometer: parseFloat(l.odometer), id: l.id, notes: l.notes };
         });
+
+        // Sort all dates
+        const sortedDates = Object.keys(allDays).sort();
+
         let totalWork = 0, totalPersonal = 0, daysTracked = 0;
-        Object.entries(days).forEach(([date, periods]) => {
-            if (periods.morning && periods.evening) {
-                const km = Math.max(0, periods.evening.odometer - periods.morning.odometer);
-                const type = periods.morning.trip_type || 'work';
-                if (type === 'work') totalWork += km; else totalPersonal += km;
+        const dailyDetails = [];
+
+        sortedDates.forEach((date, idx) => {
+            if (date < ms || date > me) return;
+            const day = allDays[date];
+            let workKm = 0, personalKm = 0;
+
+            // Work km = evening - morning (same day)
+            if (day.morning && day.evening) {
+                workKm = Math.max(0, day.evening.odometer - day.morning.odometer);
+            }
+
+            // Personal km = this morning - yesterday evening
+            if (day.morning) {
+                // Find previous day with evening
+                for (let i = idx - 1; i >= 0; i--) {
+                    const prevDate = sortedDates[i];
+                    const prevDay = allDays[prevDate];
+                    if (prevDay?.evening) {
+                        personalKm = Math.max(0, day.morning.odometer - prevDay.evening.odometer);
+                        break;
+                    }
+                }
+            }
+
+            if (workKm > 0 || personalKm > 0) {
+                totalWork += workKm;
+                totalPersonal += personalKm;
                 daysTracked++;
+                dailyDetails.push({ date, workKm, personalKm, morning: day.morning, evening: day.evening });
             }
         });
+
+        // Last 7 days for chart
         const last7 = [];
-        for (let i = 0; i < 7; i++) {
+        for (let i = 6; i >= 0; i--) {
             const d = new Date(hnNow()); d.setDate(d.getDate() - i);
             const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const dayData = days[ds];
-            if (dayData && dayData.morning && dayData.evening) {
-                last7.push({ date: ds, km: Math.max(0, dayData.evening.odometer - dayData.morning.odometer), type: dayData.morning.trip_type });
-            } else {
-                last7.push({ date: ds, km: 0, type: null });
-            }
+            const detail = dailyDetails.find(x => x.date === ds);
+            last7.push({ date: ds, workKm: detail?.workKm || 0, personalKm: detail?.personalKm || 0 });
         }
+
         const avgDailyKm = daysTracked > 0 ? (totalWork + totalPersonal) / daysTracked : 0;
-        return { totalWork, totalPersonal, daysTracked, last7, avgDailyKm };
+        return { totalWork, totalPersonal, daysTracked, dailyDetails: dailyDetails.reverse(), last7, avgDailyKm };
     }
 
     // --- VEHICLE CRUD ---
@@ -5177,12 +5209,11 @@
         document.getElementById('odo-modal-title').textContent = '📍 Registrar Kilometraje';
         const hour = hnNow().getHours();
         document.getElementById('odo-period').value = hour < 13 ? 'morning' : 'evening';
-        document.getElementById('odo-trip-type').value = 'work';
+        updateOdoHint();
         openModal('modal-odometer');
     }
 
     function editOdoLog(morningId, eveningId, vehicleId, date) {
-        // Open modal to edit existing log
         const log = odometerLogs.find(l => l.id === morningId || l.id === eveningId);
         if (!log) { openOdometerModal(vehicleId); return; }
         document.getElementById('odo-edit-id').value = log.id;
@@ -5190,10 +5221,31 @@
         document.getElementById('odo-km').value = log.odometer;
         document.getElementById('odo-date').value = log.date;
         document.getElementById('odo-period').value = log.period;
-        document.getElementById('odo-trip-type').value = log.trip_type || 'work';
         document.getElementById('odo-notes').value = log.notes || '';
         document.getElementById('odo-modal-title').textContent = '✏️ Editar Kilometraje';
+        updateOdoHint();
         openModal('modal-odometer');
+    }
+
+    function updateOdoHint() {
+        const period = document.getElementById('odo-period').value;
+        const vehicleId = document.getElementById('odo-vehicle-id').value;
+        const hint = document.getElementById('odo-hint');
+        if (!hint) return;
+        if (period === 'morning') {
+            const yesterday = new Date(hnNow()); yesterday.setDate(yesterday.getDate() - 1);
+            const ydStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+            const ydEvening = odometerLogs.find(l => l.vehicle_id === vehicleId && l.date === ydStr && l.period === 'evening');
+            hint.innerHTML = ydEvening
+                ? `🏠 <strong>Personal:</strong> Se calculará la distancia desde tu salida de ayer (${parseFloat(ydEvening.odometer).toLocaleString()} km) hasta tu llegada hoy.`
+                : `🌅 Registra tu km al llegar al trabajo. Si hay registro de salida de ayer, el tramo casa→trabajo se calcula como km personal.`;
+        } else {
+            const dateVal = document.getElementById('odo-date')?.value || todayStr();
+            const todayMorning = odometerLogs.find(l => l.vehicle_id === vehicleId && l.date === dateVal && l.period === 'morning');
+            hint.innerHTML = todayMorning
+                ? `💼 <strong>Trabajo:</strong> Se calculará la distancia laboral entre tu llegada (${parseFloat(todayMorning.odometer).toLocaleString()} km) y tu salida ahora.`
+                : `🌆 Registra tu km al salir del trabajo. Si hay registro de la mañana, el tramo laboral se calcula automáticamente.`;
+        }
     }
 
     async function saveOdometerLog() {
@@ -5208,7 +5260,6 @@
             user_id: currentUser.id,
             vehicle_id: vehicleId,
             date, period, odometer,
-            trip_type: document.getElementById('odo-trip-type').value,
             notes: document.getElementById('odo-notes').value.trim() || null,
         };
 
@@ -5340,37 +5391,54 @@
 
         if (!from || !to) { el.innerHTML = ''; return; }
 
-        // Filter odometer logs
-        let odoLogs = odometerLogs.filter(l => l.date >= from && l.date <= to);
-        if (vehFilter !== 'all') odoLogs = odoLogs.filter(l => l.vehicle_id === vehFilter);
-
-        // Group by date and vehicle
-        const days = {};
-        odoLogs.forEach(l => {
-            const key = l.vehicle_id + ':' + l.date;
-            if (!days[key]) days[key] = { vehicle_id: l.vehicle_id, date: l.date };
-            days[key][l.period] = l;
-        });
+        // Get relevant vehicles
+        const targetVehicles = vehFilter === 'all' ? vehicles.filter(v => v.daily_tracking) : vehicles.filter(v => v.id === vehFilter);
 
         let totalWorkKm = 0, totalPersonalKm = 0, totalFuelCost = 0;
         const rows = [];
 
-        Object.values(days).sort((a, b) => a.date.localeCompare(b.date)).forEach(d => {
-            if (!d.morning || !d.evening) return;
-            const km = Math.max(0, parseFloat(d.evening.odometer) - parseFloat(d.morning.odometer));
-            const type = d.morning.trip_type || 'work';
-            const v = vehicles.find(x => x.id === d.vehicle_id);
-            const vLogs = fuelLogs.filter(f => f.vehicle_id === d.vehicle_id);
-            const stats = v ? calcVehicleStats(v, vLogs) : { costPerKm: 0 };
-            const cost = km * stats.costPerKm;
+        targetVehicles.forEach(v => {
+            const vLogs = odometerLogs.filter(l => l.vehicle_id === v.id);
+            const fLogs = fuelLogs.filter(f => f.vehicle_id === v.id);
+            const vStats = calcVehicleStats(v, fLogs);
 
-            if (type === 'work') totalWorkKm += km; else totalPersonalKm += km;
-            totalFuelCost += type === 'work' ? cost : 0;
+            // Build day map including days outside range for previous-day lookups
+            const allDays = {};
+            vLogs.forEach(l => {
+                if (!allDays[l.date]) allDays[l.date] = {};
+                allDays[l.date][l.period] = { odometer: parseFloat(l.odometer) };
+            });
+            const sortedDates = Object.keys(allDays).sort();
 
-            rows.push({ date: d.date, vehicle: v?.name || '?', km, type, cost });
+            sortedDates.forEach((date, idx) => {
+                if (date < from || date > to) return;
+                const day = allDays[date];
+                let workKm = 0, personalKm = 0;
+
+                if (day.morning && day.evening) {
+                    workKm = Math.max(0, day.evening.odometer - day.morning.odometer);
+                }
+                if (day.morning) {
+                    for (let i = idx - 1; i >= 0; i--) {
+                        const prevDay = allDays[sortedDates[i]];
+                        if (prevDay?.evening) {
+                            personalKm = Math.max(0, day.morning.odometer - prevDay.evening.odometer);
+                            break;
+                        }
+                    }
+                }
+
+                if (workKm > 0 || personalKm > 0) {
+                    totalWorkKm += workKm;
+                    totalPersonalKm += personalKm;
+                    const workCost = workKm * vStats.costPerKm;
+                    totalFuelCost += workCost;
+                    rows.push({ date, vehicle: v.name, workKm, personalKm, workCost });
+                }
+            });
         });
 
-        // Also get fuel logs in range
+        // Fuel logs in range
         let fuelInRange = fuelLogs.filter(f => f.date >= from && f.date <= to);
         if (vehFilter !== 'all') fuelInRange = fuelInRange.filter(f => f.vehicle_id === vehFilter);
         const totalFuelDirect = fuelInRange.reduce((s, f) => s + parseFloat(f.total_cost), 0);
@@ -5383,7 +5451,7 @@
                     <div style="font-family:var(--font-mono);font-weight:700;font-size:18px;">${Math.round(totalWorkKm)} km</div>
                 </div>
                 <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:10px;text-align:center;">
-                    <div style="font-size:10px;color:var(--text-muted);">⛽ Costo estimado trabajo</div>
+                    <div style="font-size:10px;color:var(--text-muted);">⛽ Costo trabajo estimado</div>
                     <div style="font-family:var(--font-mono);font-weight:700;font-size:18px;color:var(--accent-danger);">${fmt(totalFuelCost)}</div>
                 </div>
             </div>
@@ -5394,14 +5462,14 @@
             </div>
             ${rows.length > 0 ? `
             <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Detalle diario</div>
-            ${rows.map(r => `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:11px;">
-                <span style="min-width:55px;color:var(--text-muted);">${formatDateHN(r.date)}</span>
-                <span style="color:${r.type==='work'?'var(--accent-primary)':'var(--accent-success)'};">${r.type==='work'?'💼':'🏠'}</span>
-                <span style="flex:1;">${r.vehicle}</span>
-                <span style="font-family:var(--font-mono);font-weight:600;">${r.km.toFixed(1)} km</span>
-                <span style="font-family:var(--font-mono);color:var(--accent-danger);min-width:55px;text-align:right;">${fmt(r.cost)}</span>
+            ${rows.map(r => `<div style="display:flex;align-items:center;gap:4px;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:11px;">
+                <span style="min-width:50px;color:var(--text-muted);">${formatDateHN(r.date)}</span>
+                <span style="min-width:50px;">${r.vehicle}</span>
+                <span style="color:var(--accent-primary);min-width:45px;">💼${r.workKm.toFixed(1)}</span>
+                <span style="color:var(--accent-success);min-width:45px;">🏠${r.personalKm.toFixed(1)}</span>
+                <span style="font-family:var(--font-mono);color:var(--accent-danger);margin-left:auto;">${fmt(r.workCost)}</span>
             </div>`).join('')}
-            ` : '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px;">No hay datos en este rango. Necesitas registros de mañana y tarde.</p>'}
+            ` : '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px;">No hay datos. Registra km mañana y tarde.</p>'}
             <button class="btn btn-secondary" style="width:100%;margin-top:12px;" onclick="exportReimbursement()">📤 Exportar CSV</button>
         `;
     }
@@ -5410,25 +5478,28 @@
         const from = document.getElementById('reimb-from').value;
         const to = document.getElementById('reimb-to').value;
         const vehFilter = document.getElementById('reimb-vehicle').value;
+        const targetVehicles = vehFilter === 'all' ? vehicles.filter(v => v.daily_tracking) : vehicles.filter(v => v.id === vehFilter);
 
-        let odoLogs = odometerLogs.filter(l => l.date >= from && l.date <= to);
-        if (vehFilter !== 'all') odoLogs = odoLogs.filter(l => l.vehicle_id === vehFilter);
+        const rows = [['Fecha', 'Vehículo', 'Km Mañana', 'Km Tarde', 'Km Trabajo', 'Km Personal', 'Costo Trabajo']];
 
-        const days = {};
-        odoLogs.forEach(l => {
-            const key = l.vehicle_id + ':' + l.date;
-            if (!days[key]) days[key] = { vehicle_id: l.vehicle_id, date: l.date };
-            days[key][l.period] = l;
-        });
+        targetVehicles.forEach(v => {
+            const vLogs = odometerLogs.filter(l => l.vehicle_id === v.id);
+            const fLogs = fuelLogs.filter(f => f.vehicle_id === v.id);
+            const vStats = calcVehicleStats(v, fLogs);
+            const allDays = {};
+            vLogs.forEach(l => { if (!allDays[l.date]) allDays[l.date] = {}; allDays[l.date][l.period] = { odometer: parseFloat(l.odometer) }; });
+            const sortedDates = Object.keys(allDays).sort();
 
-        const rows = [['Fecha', 'Vehículo', 'Tipo', 'Km Mañana', 'Km Tarde', 'Km Recorridos', 'Costo Estimado']];
-        Object.values(days).sort((a, b) => a.date.localeCompare(b.date)).forEach(d => {
-            if (!d.morning || !d.evening) return;
-            const km = Math.max(0, parseFloat(d.evening.odometer) - parseFloat(d.morning.odometer));
-            const v = vehicles.find(x => x.id === d.vehicle_id);
-            const vLogs = fuelLogs.filter(f => f.vehicle_id === d.vehicle_id);
-            const stats = v ? calcVehicleStats(v, vLogs) : { costPerKm: 0 };
-            rows.push([d.date, v?.name || '', d.morning.trip_type || 'work', d.morning.odometer, d.evening.odometer, km.toFixed(1), (km * stats.costPerKm).toFixed(2)]);
+            sortedDates.forEach((date, idx) => {
+                if (date < from || date > to) return;
+                const day = allDays[date];
+                let workKm = 0, personalKm = 0;
+                if (day.morning && day.evening) workKm = Math.max(0, day.evening.odometer - day.morning.odometer);
+                if (day.morning) { for (let i = idx-1; i >= 0; i--) { const pd = allDays[sortedDates[i]]; if (pd?.evening) { personalKm = Math.max(0, day.morning.odometer - pd.evening.odometer); break; } } }
+                if (workKm > 0 || personalKm > 0) {
+                    rows.push([date, v.name, day.morning?.odometer||'', day.evening?.odometer||'', workKm.toFixed(1), personalKm.toFixed(1), (workKm * vStats.costPerKm).toFixed(2)]);
+                }
+            });
         });
 
         const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
