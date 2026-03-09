@@ -5299,9 +5299,12 @@
         }
         if (result.error) return showToast('Error: ' + result.error.message, 'error');
 
-        await supabaseClient.from('vehicles').update({ current_odometer: odometer }).eq('id', vehicleId);
+        // Only update vehicle odometer if this reading is the highest
         const v = vehicles.find(x => x.id === vehicleId);
-        if (v) v.current_odometer = odometer;
+        if (odometer > parseFloat(v?.current_odometer || 0)) {
+            await supabaseClient.from('vehicles').update({ current_odometer: odometer }).eq('id', vehicleId);
+            if (v) v.current_odometer = odometer;
+        }
 
         closeModal('modal-odometer');
         showToast(editId ? '✅ Kilometraje actualizado' : '📍 Kilometraje registrado');
@@ -5402,7 +5405,11 @@
             : await supabaseClient.from('fuel_logs').insert(data);
         if (error) return showToast('Error: ' + error.message, 'error');
 
-        await supabaseClient.from('vehicles').update({ current_odometer: odometer }).eq('id', vehicleId);
+        // Only update vehicle odometer if this reading is the highest
+        const veh = vehicles.find(x => x.id === vehicleId);
+        if (odometer > parseFloat(veh?.current_odometer || 0)) {
+            await supabaseClient.from('vehicles').update({ current_odometer: odometer }).eq('id', vehicleId);
+        }
 
         closeModal('modal-fuel');
         showToast(editId ? '✅ Carga actualizada' : '⛽ Carga registrada');
