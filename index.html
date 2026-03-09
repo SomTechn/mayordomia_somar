@@ -4918,6 +4918,13 @@
                             <div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);">Para llenar</div><div style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--accent-danger);">${fmt(tank.costToFill)}</div></div>
                             <div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);">Autonomía</div><div style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--accent-primary);">${Math.round(tank.kmRemaining)} km</div></div>
                         </div>
+                        ${(tank.workKm > 0 || tank.personalKm > 0) ? `
+                        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-color);display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+                            <span>Desde última carga:</span>
+                            <span style="color:var(--accent-primary);font-weight:600;">💼 ${Math.round(tank.workKm)} km${tank.costPerKm > 0 ? ' ('+fmt(tank.workKm*tank.costPerKm)+')' : ''}</span>
+                            <span>·</span>
+                            <span style="color:var(--accent-success);font-weight:600;">🏠 ${Math.round(tank.personalKm)} km${tank.costPerKm > 0 ? ' ('+fmt(tank.personalKm*tank.costPerKm)+')' : ''}</span>
+                        </div>` : ''}
                     </div>` : ''}
 
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
@@ -5059,7 +5066,28 @@
         const litersToFill = vehicle.tank_capacity - litersRemaining;
         const costToFill = litersToFill * stats.avgPricePerLiter;
         const kmRemaining = litersRemaining * stats.kmPerLiter;
-        return { pctRemaining, litersRemaining, litersToFill, costToFill, kmRemaining, kmSinceFill };
+
+        // Work/Personal breakdown since last fill
+        let workKm = 0, personalKm = 0;
+        if (vehicle.daily_tracking) {
+            const fillDate = lastFull.date;
+            const vOdoLogs = odometerLogs.filter(l => l.vehicle_id === vehicle.id && l.date >= fillDate);
+            const allDays = {};
+            vOdoLogs.forEach(l => { if (!allDays[l.date]) allDays[l.date] = {}; allDays[l.date][l.period] = parseFloat(l.odometer); });
+            const sortedDates = Object.keys(allDays).sort();
+            sortedDates.forEach((date, idx) => {
+                const day = allDays[date];
+                if (day.morning && day.evening) workKm += Math.max(0, day.evening - day.morning);
+                if (day.morning && idx > 0) {
+                    for (let i = idx - 1; i >= 0; i--) {
+                        const prev = allDays[sortedDates[i]];
+                        if (prev?.evening) { personalKm += Math.max(0, day.morning - prev.evening); break; }
+                    }
+                }
+            });
+        }
+
+        return { pctRemaining, litersRemaining, litersToFill, costToFill, kmRemaining, kmSinceFill, workKm, personalKm, costPerKm: stats.costPerKm };
     }
 
     function calcOdometerStats(vehicleId) {
