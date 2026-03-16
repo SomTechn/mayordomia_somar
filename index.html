@@ -4703,39 +4703,39 @@
     }
 
     function generateSmartBudget() {
-        // Analyze last 2 months of spending by category
-        const now = hnNow();
-        const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-        const tmaStr = `${twoMonthsAgo.getFullYear()}-${String(twoMonthsAgo.getMonth()+1).padStart(2,'0')}-01`;
         const today = todayStr();
+        const allExpenses = transactions.filter(t => t.type === 'expense');
 
-        const recentExpenses = transactions.filter(t => t.type === 'expense' && t.date >= tmaStr && t.date < today);
-
-        if (recentExpenses.length < 5) {
-            showToast('Necesitas al menos 5 gastos registrados para generar presupuesto', 'error');
+        if (allExpenses.length < 3) {
+            showToast('Necesitas al menos 3 gastos registrados', 'error');
             return;
         }
 
-        // Group by category and calculate monthly average
-        const catAvg = {};
-        recentExpenses.forEach(t => {
+        // Find date range of available data
+        const dates = allExpenses.map(t => t.date).sort();
+        const firstDate = dates[0];
+        const daysOfData = Math.max(1, Math.ceil((new Date(today+'T12:00:00') - new Date(firstDate+'T12:00:00')) / 86400000));
+
+        // Group by category
+        const catData = {};
+        allExpenses.forEach(t => {
             const cat = categories.find(c => c.id === t.category_id);
             if (!cat) return;
-            if (!catAvg[cat.id]) catAvg[cat.id] = { id: cat.id, name: cat.name, icon: cat.icon, total: 0, count: 0 };
-            catAvg[cat.id].total += parseFloat(t.amount);
-            catAvg[cat.id].count++;
+            if (!catData[cat.id]) catData[cat.id] = { id: cat.id, name: cat.name, icon: cat.icon, total: 0, count: 0 };
+            catData[cat.id].total += parseFloat(t.amount);
+            catData[cat.id].count++;
         });
 
-        // Calculate months of data
-        const monthsOfData = Math.max(1, Math.ceil((new Date(today+'T12:00:00') - new Date(tmaStr+'T12:00:00')) / (30 * 86400000)));
+        // Prorate everything to 30 days (1 month)
+        const factor = 30 / daysOfData;
 
-        const suggestions = Object.values(catAvg).map(c => {
-            const monthlyAvg = c.total / monthsOfData;
-            // Suggest 90% of average (encourage slight reduction)
-            const suggested = Math.round(monthlyAvg * 0.9 / 10) * 10; // Round to nearest 10
-            return { ...c, monthlyAvg, suggested: Math.max(suggested, 10) };
-        }).filter(c => c.suggested >= 50) // Only suggest for categories with significant spending
-          .sort((a, b) => b.monthlyAvg - a.monthlyAvg);
+        const suggestions = Object.values(catData).map(c => {
+            const monthlyEstimate = c.total * factor;
+            // Suggest 90% of estimate (encourage slight reduction), round to nearest 10
+            const suggested = Math.round(monthlyEstimate * 0.9 / 10) * 10;
+            return { ...c, monthlyEstimate, suggested: Math.max(suggested, 10) };
+        }).filter(c => c.suggested >= 50)
+          .sort((a, b) => b.monthlyEstimate - a.monthlyEstimate);
 
         if (suggestions.length === 0) {
             showToast('No hay suficientes datos para sugerir presupuesto', 'error');
@@ -4743,15 +4743,16 @@
         }
 
         const totalSuggested = suggestions.reduce((s, c) => s + c.suggested, 0);
+        const dataLabel = daysOfData >= 60 ? `${Math.round(daysOfData/30)} meses` : `${daysOfData} días`;
         const preview = document.getElementById('smart-budget-preview');
         preview.innerHTML = `
             <div style="margin-top:10px;border-top:1px solid var(--border-color);padding-top:10px;">
-                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Presupuesto sugerido: <strong>${fmt(totalSuggested)}/mes</strong> (basado en ${monthsOfData} meses)</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Presupuesto mensual sugerido: <strong>${fmt(totalSuggested)}</strong> (basado en ${dataLabel} de datos)</div>
                 ${suggestions.map(c => `
                     <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color);">
                         <span style="font-size:16px;">${c.icon}</span>
                         <span style="flex:1;font-size:13px;">${c.name}</span>
-                        <span style="font-size:11px;color:var(--text-muted);">Prom: ${fmt(c.monthlyAvg)}</span>
+                        <span style="font-size:11px;color:var(--text-muted);">~${fmt(c.monthlyEstimate)}/mes</span>
                         <input type="number" class="form-input" style="width:80px;font-size:13px;padding:4px 8px;text-align:right;" 
                             value="${c.suggested}" data-cat-id="${c.id}" id="sb-${c.id}" step="10" inputmode="numeric">
                     </div>
