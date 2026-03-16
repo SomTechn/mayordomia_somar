@@ -1219,7 +1219,14 @@
 <body>
     <div id="app">
         <!-- Auth Screen -->
-        <div id="auth-screen" class="auth-screen">
+        <!-- Splash Screen -->
+        <div id="splash-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;text-align:center;">
+            <div style="font-size:56px;margin-bottom:16px;animation:authPulse 2s ease-in-out infinite;">💰</div>
+            <h1 style="font-size:24px;font-weight:700;margin-bottom:8px;">Mayordomía</h1>
+            <p style="color:var(--text-muted);font-size:14px;">Cargando...</p>
+        </div>
+
+        <div id="auth-screen" class="auth-screen" style="display:none;">
             
             <!-- === LOGIN VIEW === -->
             <div id="auth-login-view">
@@ -3844,7 +3851,7 @@
 
             closeModal('modal-tx-detail');
             showToast('✅ Movimiento actualizado');
-            await loadAllData();
+            loadAllData().catch(e => console.warn('Reload:', e));
         } catch (err) {
             console.error('Edit tx error:', err);
             showToast('Error: ' + err.message, 'error');
@@ -3869,7 +3876,7 @@
 
         closeModal('modal-tx-detail');
         showToast('🗑️ Movimiento eliminado');
-        await loadAllData();
+        loadAllData().catch(e => console.warn('Reload:', e));
     }
 
     // ========================
@@ -4255,12 +4262,12 @@
             closeModal('modal-transaction');
             currentPhotoFile = null;
             showToast(currentTxType === 'income' ? '💵 Ingreso registrado' : currentTxType === 'expense' ? '🛒 Gasto registrado' : '🔄 Transferencia realizada');
-            await loadAllData();
+            // Reload data in background - don't block the UI
+            loadAllData().catch(e => console.warn('Reload error:', e));
         } catch (err) {
             console.error('saveTransaction error:', err);
             showToast('Error: ' + err.message, 'error');
         } finally {
-            // ALWAYS reset the button no matter what happens
             resetSaveBtn();
         }
     }
@@ -4585,7 +4592,7 @@
 
         closeModal('modal-debt-payment');
         showToast(newBalance <= 0 ? '🎉 ¡Deuda pagada completamente!' : 'Abono registrado');
-        await loadAllData();
+        loadAllData().catch(e => console.warn('Reload:', e));
         renderDebtsPage();
     }
 
@@ -6861,7 +6868,7 @@
 
             closeModal('modal-family-transfer');
             showToast('💸 ¡Transferencia enviada!');
-            await loadAllData();
+            loadAllData().catch(e => console.warn('Reload:', e));
         } catch (err) {
             showToast('Error: ' + err.message, 'error');
         }
@@ -6993,9 +7000,12 @@
         if (session) {
             currentUser = session.user;
             await checkProfile();
+        } else {
+            document.getElementById('auth-screen').style.display = 'flex';
         }
+        // Hide splash
+        document.getElementById('splash-screen').style.display = 'none';
 
-        // Listen for auth changes
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session) {
                 currentUser = session.user;
