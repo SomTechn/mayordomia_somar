@@ -1605,8 +1605,22 @@
                 <div id="page-budgets" class="page">
                     <div class="section-title">
                         <span>Presupuestos del Mes</span>
-                        <small onclick="openBudgetModal()">+ Nuevo</small>
+                        <small onclick="openBudgetModal()">+ Manual</small>
                     </div>
+                    <!-- Smart Budget Generator -->
+                    <div id="smart-budget-section" class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.06));border:1px solid rgba(34,211,238,0.12);">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <span style="font-size:24px;">🧠</span>
+                            <div style="flex:1;">
+                                <div style="font-weight:600;font-size:14px;">Presupuesto Inteligente</div>
+                                <div style="font-size:11px;color:var(--text-muted);">Basado en tu historial de gastos</div>
+                            </div>
+                            <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="generateSmartBudget()">Generar</button>
+                        </div>
+                        <div id="smart-budget-preview"></div>
+                    </div>
+                    <!-- Budget Summary -->
+                    <div id="budget-summary" style="display:none;margin-bottom:16px;"></div>
                     <div id="budgets-list"></div>
                 </div>
 
@@ -2614,19 +2628,31 @@
                         <option value="weekly">Semanal</option>
                     </select>
                 </div>
-                <div class="form-row">
+                <div id="cfg-monthly-days" class="form-group">
+                    <label class="form-label">Día de cobro</label>
+                    <input type="number" class="form-input" id="cfg-pay-day-1" min="1" max="31" value="15">
+                </div>
+                <div id="cfg-biweekly-days" style="display:none;" class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Día de pago 1</label>
-                        <input type="number" class="form-input" id="cfg-pay-day-1" min="1" max="31" value="15">
+                        <label class="form-label">Primer cobro (día)</label>
+                        <input type="number" class="form-input" id="cfg-pay-day-b1" min="1" max="31" value="15">
                     </div>
-                    <div class="form-group" id="cfg-pay-day-2-group">
-                        <label class="form-label">Día de pago 2</label>
+                    <div class="form-group">
+                        <label class="form-label">Segundo cobro (día)</label>
                         <input type="number" class="form-input" id="cfg-pay-day-2" min="1" max="31" value="30">
                     </div>
                 </div>
+                <div id="cfg-weekly-day" style="display:none;" class="form-group">
+                    <label class="form-label">Día de cobro</label>
+                    <select class="form-select" id="cfg-pay-dow">
+                        <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option>
+                        <option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option>
+                    </select>
+                </div>
                 <div class="form-group">
-                    <label class="form-label">Ingreso mensual aproximado</label>
+                    <label class="form-label">Ingreso mensual aproximado (total)</label>
                     <input type="number" class="form-input" id="cfg-monthly-income" step="0.01" inputmode="decimal" placeholder="0.00">
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Si cobras quincenal, pon la suma de ambas quincenas</div>
                 </div>
                 <div class="form-row" style="margin-top:8px;">
                     <button class="btn btn-secondary" onclick="closeModal('modal-income-config')">Cancelar</button>
@@ -4601,36 +4627,182 @@
     // ========================
     function renderBudgetsPage() {
         const container = document.getElementById('budgets-list');
-        if (budgets.length === 0) {
-            container.innerHTML = '<div class="empty-state"><span>📊</span><p>No hay presupuestos para este mes</p></div>';
-            return;
-        }
-
         const { start, end } = getMonthRange();
         const monthExpenses = transactions.filter(t => t.type === 'expense' && t.date >= start && t.date <= end);
+
+        // Budget summary
+        if (budgets.length > 0) {
+            const totalBudgeted = budgets.reduce((s, b) => s + parseFloat(b.amount), 0);
+            const totalSpent = budgets.reduce((s, b) => {
+                return s + monthExpenses.filter(t => t.category_id === b.category_id).reduce((ss, t) => ss + parseFloat(t.amount), 0);
+            }, 0);
+            const pct = totalBudgeted > 0 ? (totalSpent / totalBudgeted * 100) : 0;
+            const summaryEl = document.getElementById('budget-summary');
+            summaryEl.style.display = 'block';
+            summaryEl.innerHTML = `<div class="card">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);">Presupuestado</div><div style="font-family:var(--font-mono);font-weight:700;font-size:15px;">${fmt(totalBudgeted)}</div></div>
+                    <div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);">Gastado</div><div style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--accent-danger);">${fmt(totalSpent)}</div></div>
+                    <div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);">Disponible</div><div style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:${totalBudgeted-totalSpent>=0?'var(--accent-success)':'var(--accent-danger)'};">${fmt(totalBudgeted - totalSpent)}</div></div>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,pct)}%;background:${pct>=100?'var(--accent-danger)':pct>=80?'var(--accent-warning)':'var(--accent-success)'};"></div></div>
+                <div style="text-align:right;font-size:11px;color:var(--text-muted);margin-top:4px;">${Math.round(pct)}% del presupuesto total</div>
+            </div>`;
+        } else {
+            document.getElementById('budget-summary').style.display = 'none';
+        }
+
+        if (budgets.length === 0) {
+            container.innerHTML = '<div class="empty-state"><span>📊</span><p>No hay presupuestos. Usa el botón "Generar" arriba para crear uno inteligente.</p></div>';
+            return;
+        }
 
         container.innerHTML = budgets.map(b => {
             const spent = monthExpenses.filter(t => t.category_id === b.category_id).reduce((s, t) => s + parseFloat(t.amount), 0);
             const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
             const color = pct >= 100 ? 'var(--accent-danger)' : pct >= 80 ? 'var(--accent-warning)' : 'var(--accent-success)';
+            const remaining = Math.max(0, b.amount - spent);
 
             return `
-                <div class="budget-item">
-                    <div class="budget-item-header">
-                        <div class="budget-item-name">${b.categories?.icon || '📝'} ${b.categories?.name || 'Sin categoría'}</div>
-                        <div class="budget-item-amounts">${fmt(spent)} / ${fmt(b.amount)}</div>
+                <div class="card" style="margin-bottom:10px;${pct >= 100 ? 'border-left:3px solid var(--accent-danger);' : ''}">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                        <span style="font-size:20px;">${b.categories?.icon || '📝'}</span>
+                        <div style="flex:1;">
+                            <div style="font-size:14px;font-weight:500;">${b.categories?.name || 'Sin categoría'}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">${fmt(spent)} de ${fmt(b.amount)} · Quedan ${fmt(remaining)}</div>
+                        </div>
+                        <div style="display:flex;gap:4px;">
+                            <button onclick="editBudgetAmount('${b.id}',${b.amount})" style="background:none;border:none;color:var(--accent-primary);font-size:14px;cursor:pointer;">✏️</button>
+                            <button onclick="deleteBudget('${b.id}')" style="background:none;border:none;color:var(--accent-danger);font-size:14px;cursor:pointer;">🗑️</button>
+                        </div>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${Math.min(100, pct)}%; background: ${color};"></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, pct)}%;background:${color};"></div></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px;">
+                        <span style="color:${color};">${Math.round(pct)}%</span>
+                        ${pct >= 100 ? `<span style="color:var(--accent-danger);font-weight:600;">Excedido por ${fmt(spent - b.amount)}</span>` : 
+                          pct >= 80 ? `<span style="color:var(--accent-warning);">¡Casi al límite!</span>` : 
+                          `<span style="color:var(--text-muted);">Disponible: ${fmt(remaining)}</span>`}
                     </div>
-                    <p style="font-size:11px; color:${color}; margin-top:4px; text-align:right;">${Math.round(pct)}% utilizado</p>
                 </div>
             `;
         }).join('');
     }
 
+    function generateSmartBudget() {
+        // Analyze last 2 months of spending by category
+        const now = hnNow();
+        const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const tmaStr = `${twoMonthsAgo.getFullYear()}-${String(twoMonthsAgo.getMonth()+1).padStart(2,'0')}-01`;
+        const today = todayStr();
+
+        const recentExpenses = transactions.filter(t => t.type === 'expense' && t.date >= tmaStr && t.date < today);
+
+        if (recentExpenses.length < 5) {
+            showToast('Necesitas al menos 5 gastos registrados para generar presupuesto', 'error');
+            return;
+        }
+
+        // Group by category and calculate monthly average
+        const catAvg = {};
+        recentExpenses.forEach(t => {
+            const cat = categories.find(c => c.id === t.category_id);
+            if (!cat) return;
+            if (!catAvg[cat.id]) catAvg[cat.id] = { id: cat.id, name: cat.name, icon: cat.icon, total: 0, count: 0 };
+            catAvg[cat.id].total += parseFloat(t.amount);
+            catAvg[cat.id].count++;
+        });
+
+        // Calculate months of data
+        const monthsOfData = Math.max(1, Math.ceil((new Date(today+'T12:00:00') - new Date(tmaStr+'T12:00:00')) / (30 * 86400000)));
+
+        const suggestions = Object.values(catAvg).map(c => {
+            const monthlyAvg = c.total / monthsOfData;
+            // Suggest 90% of average (encourage slight reduction)
+            const suggested = Math.round(monthlyAvg * 0.9 / 10) * 10; // Round to nearest 10
+            return { ...c, monthlyAvg, suggested: Math.max(suggested, 10) };
+        }).filter(c => c.suggested >= 50) // Only suggest for categories with significant spending
+          .sort((a, b) => b.monthlyAvg - a.monthlyAvg);
+
+        if (suggestions.length === 0) {
+            showToast('No hay suficientes datos para sugerir presupuesto', 'error');
+            return;
+        }
+
+        const totalSuggested = suggestions.reduce((s, c) => s + c.suggested, 0);
+        const preview = document.getElementById('smart-budget-preview');
+        preview.innerHTML = `
+            <div style="margin-top:10px;border-top:1px solid var(--border-color);padding-top:10px;">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Presupuesto sugerido: <strong>${fmt(totalSuggested)}/mes</strong> (basado en ${monthsOfData} meses)</div>
+                ${suggestions.map(c => `
+                    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                        <span style="font-size:16px;">${c.icon}</span>
+                        <span style="flex:1;font-size:13px;">${c.name}</span>
+                        <span style="font-size:11px;color:var(--text-muted);">Prom: ${fmt(c.monthlyAvg)}</span>
+                        <input type="number" class="form-input" style="width:80px;font-size:13px;padding:4px 8px;text-align:right;" 
+                            value="${c.suggested}" data-cat-id="${c.id}" id="sb-${c.id}" step="10" inputmode="numeric">
+                    </div>
+                `).join('')}
+                <div class="form-row" style="margin-top:12px;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('smart-budget-preview').innerHTML=''">Cancelar</button>
+                    <button class="btn btn-primary" onclick="applySmartBudget()">✅ Aplicar Presupuesto</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function applySmartBudget() {
+        const inputs = document.querySelectorAll('[data-cat-id]');
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+        let count = 0;
+
+        for (const input of inputs) {
+            const catId = input.dataset.catId;
+            const amount = parseFloat(input.value);
+            if (!amount || amount <= 0) continue;
+
+            // Check if budget already exists for this category/month
+            const existing = budgets.find(b => b.category_id === catId && b.month === month && b.year === year);
+            if (existing) {
+                await supabaseClient.from('budgets').update({ amount }).eq('id', existing.id);
+            } else {
+                await supabaseClient.from('budgets').insert({
+                    user_id: currentUser.id, category_id: catId, amount, period: 'monthly', month, year
+                });
+            }
+            count++;
+        }
+
+        document.getElementById('smart-budget-preview').innerHTML = '';
+        showToast(`📊 ${count} presupuestos ${budgets.length > 0 ? 'actualizados' : 'creados'}`);
+        await loadBudgets();
+        renderBudgetsPage();
+    }
+
+    async function editBudgetAmount(id, currentAmount) {
+        const newAmount = prompt('Nuevo monto de presupuesto:', currentAmount);
+        if (newAmount === null) return;
+        const amount = parseFloat(newAmount);
+        if (!amount || amount <= 0) return showToast('Monto inválido', 'error');
+        const { error } = await supabaseClient.from('budgets').update({ amount }).eq('id', id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+        showToast('✅ Presupuesto actualizado');
+        await loadBudgets();
+        renderBudgetsPage();
+    }
+
+    async function deleteBudget(id) {
+        if (!confirm('¿Eliminar este presupuesto?')) return;
+        const { error } = await supabaseClient.from('budgets').delete().eq('id', id);
+        if (error) return showToast('Error: ' + error.message, 'error');
+        showToast('🗑️ Presupuesto eliminado');
+        await loadBudgets();
+        renderBudgetsPage();
+    }
+
     function openBudgetModal() {
-        const expenseCats = categories.filter(c => c.type === 'expense');
+        const expenseCats = categories.filter(c => c.type === 'expense').sort((a,b) => a.name.localeCompare(b.name));
         document.getElementById('budget-category').innerHTML = expenseCats.map(c => 
             `<option value="${c.id}">${c.icon} ${c.name}</option>`
         ).join('');
@@ -4655,7 +4827,7 @@
 
         if (error) return showToast('Error: ' + error.message, 'error');
         closeModal('modal-budget');
-        showToast('Presupuesto creado');
+        showToast('📊 Presupuesto creado');
         await loadBudgets();
         renderBudgetsPage();
     }
@@ -5774,9 +5946,26 @@
             catSpending[name].count++;
         });
 
-        // Daily avg spending
-        const dailyAvgSpend = dayOfMonth > 0 ? monthExpenses / dayOfMonth : 0;
-        const projectedMonthEnd = monthExpenses + (dailyAvgSpend * daysLeft);
+        // Daily avg spending - exclude non-recurring outliers
+        // Get scheduled payment and debt category IDs (these are fixed, not daily)
+        const fixedCatIds = new Set();
+        scheduledPayments.forEach(p => { if (p.category_id) fixedCatIds.add(p.category_id); });
+        const debtCat = categories.find(c => c.name === 'Préstamo');
+        if (debtCat) fixedCatIds.add(debtCat.id);
+        const motoCat = categories.find(c => c.name === 'Moto');
+        if (motoCat) fixedCatIds.add(motoCat.id);
+        const carroCat = categories.find(c => c.name === 'Carro');
+        if (carroCat) fixedCatIds.add(carroCat.id);
+
+        // Separate recurring daily expenses from fixed/one-time
+        const dailyExpenses = monthTxs.filter(t => t.type === 'expense' && !fixedCatIds.has(t.category_id));
+        const fixedExpenses = monthTxs.filter(t => t.type === 'expense' && fixedCatIds.has(t.category_id));
+        const monthDailyTotal = dailyExpenses.reduce((s,t) => s + parseFloat(t.amount), 0);
+        const monthFixedTotal = fixedExpenses.reduce((s,t) => s + parseFloat(t.amount), 0);
+
+        const dailyAvgSpend = dayOfMonth > 0 ? monthDailyTotal / dayOfMonth : 0;
+        const projectedDailyEnd = monthDailyTotal + (dailyAvgSpend * daysLeft);
+        const projectedMonthEnd = projectedDailyEnd + monthFixedTotal + committedBeforePay;
 
         // Savings rate
         const savingsRate = estMonthlyIncome > 0 ? ((estMonthlyIncome - projectedMonthEnd) / estMonthlyIncome * 100) : 0;
@@ -5910,13 +6099,46 @@
             const border = daysUntil <= 0 ? 'rgba(248,113,113,0.3)' : daysUntil <= 3 ? 'rgba(251,191,36,0.3)' : 'var(--border-color)';
             const urgLabel = daysUntil < 0 ? `⚠️ Vencido hace ${Math.abs(daysUntil)}d` : daysUntil === 0 ? '🔴 Hoy' : daysUntil <= 3 ? `🟡 En ${daysUntil}d` : `${daysUntil}d`;
             const freqLabel = { monthly:'Mensual', biweekly:'Quincenal', weekly:'Semanal', quarterly:'Trimestral', semiannual:'Semestral', annual:'Anual', once:'Único' }[p.frequency] || '';
-            return `<div style="background:${urgency};border:1px solid ${border};border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="editScheduledPayment('${p.id}')">
-                <span style="font-size:22px;">${p.categories?.icon || '📝'}</span>
-                <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text-muted);">${freqLabel} · ${urgLabel}</div></div>
-                <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${fmt(p.amount)}</div>
+            const showPayBtn = daysUntil <= 3;
+            return `<div style="background:${urgency};border:1px solid ${border};border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="editScheduledPayment('${p.id}')">
+                    <span style="font-size:22px;">${p.categories?.icon || '📝'}</span>
+                    <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--text-muted);">${freqLabel} · ${urgLabel}</div></div>
+                    <div style="font-family:var(--font-mono);font-weight:700;font-size:14px;">${fmt(p.amount)}</div>
+                </div>
+                ${showPayBtn ? `<button onclick="event.stopPropagation();markPaymentPaid('${p.id}')" style="width:100%;margin-top:8px;padding:6px;border-radius:var(--radius-sm);border:1px solid rgba(52,211,153,0.3);background:rgba(52,211,153,0.1);color:var(--accent-success);font-size:12px;font-weight:600;cursor:pointer;">✅ Marcar como Pagado</button>` : ''}
             </div>`;
         }).join('');
         el.innerHTML = items + `<div style="text-align:center;padding:8px;"><span style="font-size:13px;color:var(--text-muted);">Total próximos 30 días: <strong>${fmt(a.upcomingTotal)}</strong></span></div>`;
+    }
+
+    async function markPaymentPaid(id) {
+        const p = scheduledPayments.find(s => s.id === id);
+        if (!p) return;
+
+        // Calculate next due date based on frequency
+        const current = new Date(p.next_due_date + 'T12:00:00');
+        let next;
+        switch (p.frequency) {
+            case 'weekly': next = new Date(current); next.setDate(next.getDate() + 7); break;
+            case 'biweekly': next = new Date(current); next.setDate(next.getDate() + 15); break;
+            case 'monthly': next = new Date(current); next.setMonth(next.getMonth() + 1); break;
+            case 'quarterly': next = new Date(current); next.setMonth(next.getMonth() + 3); break;
+            case 'semiannual': next = new Date(current); next.setMonth(next.getMonth() + 6); break;
+            case 'annual': next = new Date(current); next.setFullYear(next.getFullYear() + 1); break;
+            case 'once':
+                await supabaseClient.from('scheduled_payments').update({ is_active: false }).eq('id', id);
+                showToast('✅ Pago único completado');
+                await loadScheduledPayments();
+                if (currentPage === 'advisor') renderAdvisorPage();
+                return;
+            default: next = new Date(current); next.setMonth(next.getMonth() + 1);
+        }
+        const nextStr = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`;
+        await supabaseClient.from('scheduled_payments').update({ next_due_date: nextStr }).eq('id', id);
+        showToast(`✅ ${p.name} pagado. Próximo: ${formatDateHN(nextStr)}`);
+        await loadScheduledPayments();
+        if (currentPage === 'advisor') renderAdvisorPage();
     }
 
     function renderIncomeDistribution(a) {
@@ -6196,8 +6418,10 @@
 
     // --- INCOME CONFIG ---
     function openIncomeConfigModal() {
-        document.getElementById('cfg-income-freq').value = userProfile?.income_frequency || 'monthly';
+        const freq = userProfile?.income_frequency || 'monthly';
+        document.getElementById('cfg-income-freq').value = freq;
         document.getElementById('cfg-pay-day-1').value = userProfile?.pay_day_1 || 15;
+        document.getElementById('cfg-pay-day-b1').value = userProfile?.pay_day_1 || 15;
         document.getElementById('cfg-pay-day-2').value = userProfile?.pay_day_2 || 30;
         document.getElementById('cfg-monthly-income').value = userProfile?.monthly_income || '';
         togglePayDay2();
@@ -6206,14 +6430,17 @@
 
     function togglePayDay2() {
         const freq = document.getElementById('cfg-income-freq').value;
-        document.getElementById('cfg-pay-day-2-group').style.display = freq === 'biweekly' ? 'block' : 'none';
+        document.getElementById('cfg-monthly-days').style.display = freq === 'monthly' ? 'block' : 'none';
+        document.getElementById('cfg-biweekly-days').style.display = freq === 'biweekly' ? 'flex' : 'none';
+        document.getElementById('cfg-weekly-day').style.display = freq === 'weekly' ? 'block' : 'none';
     }
 
     async function saveIncomeConfig() {
+        const freq = document.getElementById('cfg-income-freq').value;
         const data = {
-            income_frequency: document.getElementById('cfg-income-freq').value,
-            pay_day_1: parseInt(document.getElementById('cfg-pay-day-1').value) || 15,
-            pay_day_2: parseInt(document.getElementById('cfg-pay-day-2').value) || 30,
+            income_frequency: freq,
+            pay_day_1: freq === 'biweekly' ? parseInt(document.getElementById('cfg-pay-day-b1').value) || 15 : parseInt(document.getElementById('cfg-pay-day-1').value) || 15,
+            pay_day_2: freq === 'biweekly' ? parseInt(document.getElementById('cfg-pay-day-2').value) || 30 : null,
             monthly_income: parseFloat(document.getElementById('cfg-monthly-income').value) || 0,
         };
         const { error } = await supabaseClient.from('users').update(data).eq('id', currentUser.id);
