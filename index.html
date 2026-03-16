@@ -1523,6 +1523,20 @@
                             <small>Transferir</small>
                         </div>
                     </div>
+                    <div class="quick-actions" style="margin-top:8px;">
+                        <div class="quick-action" onclick="navigateTo('debts')">
+                            <span>💳</span>
+                            <small>Deudas</small>
+                        </div>
+                        <div class="quick-action" onclick="navigateTo('vehicles')">
+                            <span>⛽</span>
+                            <small>Vehículos</small>
+                        </div>
+                        <div class="quick-action" onclick="navigateTo('reports')">
+                            <span>📈</span>
+                            <small>Reportes</small>
+                        </div>
+                    </div>
 
                     <!-- Budget Alerts -->
                     <div id="budget-alerts" style="display:none;"></div>
@@ -1915,9 +1929,9 @@
                     <small>Cuentas</small>
                 </button>
                 <button class="nav-fab" onclick="openTransactionModal()">+</button>
-                <button class="nav-item" onclick="navigateTo('debts')" data-page="debts">
-                    <span>📋</span>
-                    <small>Deudas</small>
+                <button class="nav-item" onclick="navigateTo('budgets')" data-page="budgets">
+                    <span>📊</span>
+                    <small>Presupuesto</small>
                 </button>
                 <button class="nav-item" onclick="navigateTo('advisor')" data-page="advisor">
                     <span>🧠</span>
