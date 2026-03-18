@@ -5571,9 +5571,19 @@
 
         let result;
         if (editId) {
+            // Editing existing record by ID
             result = await supabaseClient.from('odometer_logs').update(data).eq('id', editId);
         } else {
-            result = await supabaseClient.from('odometer_logs').upsert(data, { onConflict: 'vehicle_id,date,period' });
+            // Check if record already exists for this vehicle+date+period
+            const { data: existing } = await supabaseClient.from('odometer_logs')
+                .select('id').eq('vehicle_id', vehicleId).eq('date', date).eq('period', period).maybeSingle();
+            if (existing) {
+                // Update existing
+                result = await supabaseClient.from('odometer_logs').update(data).eq('id', existing.id);
+            } else {
+                // Insert new
+                result = await supabaseClient.from('odometer_logs').insert(data);
+            }
         }
         if (result.error) return showToast('Error: ' + result.error.message, 'error');
 
