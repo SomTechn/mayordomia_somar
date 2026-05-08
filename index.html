@@ -5247,6 +5247,12 @@
         const avgPricePerLiter = totalLiters > 0 ? totalSpent / totalLiters : 0;
         const avgLitersPerFill = logs.length > 0 ? totalLiters / logs.length : 0;
 
+        // Current price: average of last 3 fills (more accurate for current cost)
+        const recent3 = logs.slice(0, 3);
+        const recentLiters = recent3.reduce((s, f) => s + parseFloat(f.liters), 0);
+        const recentSpent = recent3.reduce((s, f) => s + parseFloat(f.total_cost), 0);
+        const currentPricePerLiter = recentLiters > 0 ? recentSpent / recentLiters : avgPricePerLiter;
+
         // Calculate km/L from consecutive full-tank fills (most accurate method)
         // logs are sorted by date DESC, so logs[0] is newest
         let totalKmTracked = 0, totalLitersTracked = 0;
@@ -5260,13 +5266,13 @@
             }
         }
         const kmPerLiter = totalLitersTracked > 0 ? totalKmTracked / totalLitersTracked : 0;
-        const costPerKm = kmPerLiter > 0 ? avgPricePerLiter / kmPerLiter : 0;
+        const costPerKm = kmPerLiter > 0 ? currentPricePerLiter / kmPerLiter : 0;
 
         // Total km from first to last log
         const sortedByOdo = [...logs].sort((a, b) => parseFloat(a.odometer) - parseFloat(b.odometer));
         const totalKm = sortedByOdo.length >= 2 ? parseFloat(sortedByOdo[sortedByOdo.length - 1].odometer) - parseFloat(sortedByOdo[0].odometer) : 0;
 
-        return { kmPerLiter, costPerKm, avgPricePerLiter, totalSpent, totalKm, avgLitersPerFill, fillCount: logs.length };
+        return { kmPerLiter, costPerKm, avgPricePerLiter, currentPricePerLiter, totalSpent, totalKm, avgLitersPerFill, fillCount: logs.length };
     }
 
     function calcTankStatus(vehicle, logs) {
@@ -5286,7 +5292,7 @@
         const litersRemaining = Math.max(0, parseFloat(vehicle.tank_capacity) - litersBurned);
         const pctRemaining = Math.max(0, Math.min(100, (litersRemaining / vehicle.tank_capacity) * 100));
         const litersToFill = Math.max(0, vehicle.tank_capacity - litersRemaining);
-        const costToFill = litersToFill * stats.avgPricePerLiter;
+        const costToFill = litersToFill * (stats.currentPricePerLiter || stats.avgPricePerLiter);
         const kmRemaining = litersRemaining * stats.kmPerLiter;
 
         // Work/Personal breakdown since last fill
