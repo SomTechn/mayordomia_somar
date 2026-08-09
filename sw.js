@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayordomia-v1';
+const CACHE_NAME = 'mayordomia-v2';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
